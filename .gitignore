@@ -1,0 +1,11 @@
+# Build output
+dist/
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Editor
+.DS_Store

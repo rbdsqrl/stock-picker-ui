@@ -1,0 +1,100 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  height: 52px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logoMark {
+  color: var(--accent);
+  font-size: 16px;
+}
+
+.logoText {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--text);
+}
+
+.logoBadge {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+.nav {
+  display: flex;
+  gap: 4px;
+}
+
+.navBtn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.navBtn:hover {
+  color: var(--text);
+  background: var(--bg3);
+}
+
+.navBtn.active {
+  color: var(--accent);
+  background: rgba(77, 148, 116, 0.12);
+}
+
+.navBtn.activeAmber {
+  color: var(--yellow);
+  background: rgba(154, 120, 32, 0.12);
+}
+
+.main {
+  flex: 1;
+  padding: 32px 28px;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 28px;
+  border-top: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+}

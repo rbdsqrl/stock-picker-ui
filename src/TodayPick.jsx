@@ -1,0 +1,595 @@
+import { useState, useEffect, useRef } from "react";
+import styles from "./TodayPick.module.css";
+
+const API = import.meta.env.VITE_API_URL || "http://localhost:8001";
+
+const SIGNAL_META = {
+  trend:        "Trend",
+  momentum:     "Momentum",
+  volume:       "Volume",
+  breakout:     "Breakout",
+  rel_strength: "Rel. Strength",
+};
+
+const EARLY_SIGNAL_META = {
+  higher_lows:      "Higher Lows",
+  macd_crossover:   "MACD",
+  rsi_recovery:     "RSI Recovery",
+  obv_accumulation: "OBV Trend",
+  bb_squeeze:       "BB Squeeze",
+  rel_strength:     "Rel. Strength",
+};
+
+const RANK_LABELS = ["", "#1 Best Pick", "#2 Runner-Up", "#3 Watch List"];
+
+function ScoreBar({ score }) {
+  const pct = ((score + 1) / 2) * 100;
+  const color = pct >= 65 ? "var(--accent)" : pct >= 45 ? "var(--yellow)" : "var(--red)";
+  return (
+    <div className={styles.scoreRow}>
+      <span className={styles.scoreLabel}>Composite Score</span>
+      <div className={styles.scoreTrack}>
+        <div className={styles.scoreFill} style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <span className={styles.scoreNum} style={{ color }}>
+        {score >= 0 ? "+" : ""}{(score * 100).toFixed(0)}
+      </span>
+    </div>
+  );
+}
+
+function SignalRow({ name, data }) {
+  const label = SIGNAL_META[name] || name;
+  const s     = data?.score ?? 0;
+  const dotCls = s === 1 ? styles.dotGreen : s === -1 ? styles.dotRed : styles.dotNeutral;
+
+  let detail = "";
+  if (name === "trend" && data.sma50 != null) {
+    detail = `₹${data.price} · 50DMA ₹${data.sma50} · 200DMA ₹${data.sma200}`;
+  } else if (name === "momentum" && data.rsi != null) {
+    detail = `RSI ${data.rsi}`;
+  } else if (name === "volume" && data.vol_ratio != null) {
+    detail = `${data.vol_ratio}× 20-day avg`;
+  } else if (name === "breakout" && data["52w_high"] != null) {
+    detail = `${data.pct_from_high}% from 52W high ₹${data["52w_high"]}`;
+  } else if (name === "rel_strength" && data.rel_strength != null) {
+    detail = `${data.rel_strength > 0 ? "+" : ""}${data.rel_strength}% vs Nifty (1M)`;
+  }
+
+  return (
+    <div className={styles.signalRow}>
+      <span className={`${styles.dot} ${dotCls}`} />
+      <span className={styles.signalName}>{label}</span>
+      <span className={styles.signalVal}>{detail}</span>
+    </div>
+  );
+}
+
+function FundamentalsSection({ fundamentals: f }) {
+  if (!f) return null;
+  const { summary } = f;
+
+  const fmtCr = (v) => {
+    if (v == null) return null;
+    return v >= 10000 ? `₹${(v / 100).toFixed(0)}K Cr` : `₹${v.toLocaleString("en-IN")} Cr`;
+  };
+  const fmtPct = (v) => (v != null ? `${v > 0 ? "+" : ""}${v}%` : null);
+
+  const metrics = [
+    { label: "Mkt Cap",      val: fmtCr(f.market_cap_cr),     color: null },
+    { label: "P/E",          val: f.pe   != null ? `${f.pe}×` : null,      color: null },
+    { label: "Fwd P/E",      val: f.pe_fwd != null ? `${f.pe_fwd}×` : null, color: null },
+    { label: "Rev Growth",   val: fmtPct(f.rev_growth),        color: f.rev_growth > 0 ? "var(--accent)" : "var(--red)" },
+    { label: "Earnings",     val: fmtPct(f.earnings_growth),   color: f.earnings_growth > 0 ? "var(--accent)" : "var(--red)" },
+    { label: "Margin",       val: f.profit_margin != null ? `${f.profit_margin}%` : null, color: null },
+    { label: "ROE",          val: f.roe != null ? `${f.roe}%` : null,       color: f.roe > 15 ? "var(--accent)" : null },
+    { label: "D/E",          val: f.debt_to_equity != null ? `${f.debt_to_equity}` : null,
+                               color: f.debt_to_equity > 2 ? "var(--red)" : null },
+  ].filter(m => m.val != null);
+
+  if (!metrics.length && !summary) return null;
+
+  return (
+    <div className={styles.analysisBlock}>
+      <span className={styles.analysisLabel}>Fundamentals</span>
+      {summary && <p className={styles.interpretText}>{summary}</p>}
+      <div className={styles.metricsRow}>
+        {metrics.map(m => (
+          <span key={m.label} className={styles.metricChip}>
+            <span className={styles.metricLabel}>{m.label}</span>
+            <span className={styles.metricVal} style={{ color: m.color || "var(--text)" }}>{m.val}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SetupSignalRow({ name, data }) {
+  const label = EARLY_SIGNAL_META[name] || name;
+  const s     = data?.score ?? 0;
+  const dotCls = s === 1 ? styles.dotAmber : s === -1 ? styles.dotRed : styles.dotNeutral;
+
+  let detail = "";
+  if (name === "higher_lows") {
+    if (data.higher_lows != null) {
+      detail = data.higher_lows
+        ? (data.tight_base ? `Ascending · Base ${data.range_20d_pct}% wide` : `Ascending lows · ${data.range_20d_pct}% range`)
+        : `No ascending lows · ${data.range_20d_pct}% range`;
+    }
+  } else if (name === "macd_crossover") {
+    detail = data.just_crossed
+      ? "Just crossed positive"
+      : data.hist_pct != null ? `Hist ${data.hist_pct > 0 ? "+" : ""}${data.hist_pct}%` : "";
+  } else if (name === "rsi_recovery") {
+    detail = data.rsi != null ? `RSI ${data.rsi} · 10d low ${data.rsi_10d_low}` : "";
+  } else if (name === "obv_accumulation") {
+    detail = data.obv_chg_pct != null
+      ? `OBV ${data.obv_chg_pct > 0 ? "+" : ""}${data.obv_chg_pct}% · Price ${data.price_chg_pct > 0 ? "+" : ""}${data.price_chg_pct}%`
+      : "";
+  } else if (name === "bb_squeeze") {
+    detail = data.bb_pct_rank != null ? `Width rank: ${data.bb_pct_rank}th pctile` : "";
+  } else if (name === "rel_strength") {
+    detail = data.rel_strength != null
+      ? `${data.rel_strength > 0 ? "+" : ""}${data.rel_strength}% vs Nifty`
+      : "";
+  }
+
+  return (
+    <div className={styles.signalRow}>
+      <span className={`${styles.dot} ${dotCls}`} />
+      <span className={styles.signalName}>{label}</span>
+      <span className={styles.signalVal}>{detail}</span>
+    </div>
+  );
+}
+
+function WatchlistCard({ pick }) {
+  const {
+    ticker, company, sector, price,
+    pct_from_52w_high, setup_summary, watch_for,
+    signals, stop_loss, stop_pct, target, target_pct, rr_ratio,
+    run_at, rank,
+  } = pick;
+
+  const runTime = run_at
+    ? new Date(run_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+    : "";
+
+  return (
+    <div className={styles.watchCard}>
+      <div className={styles.watchHead}>
+        <span className={styles.setupBadge}>#{rank} Setting Up</span>
+        <span className={styles.runMeta}>{runTime}</span>
+      </div>
+
+      <div className={styles.stockRow}>
+        <div>
+          <div className={styles.tickerLine}>
+            <span className={styles.watchTicker}>{ticker}</span>
+            <span className={styles.sectorTag}>{sector}</span>
+          </div>
+          <div className={styles.company}>{company}</div>
+        </div>
+        <div className={styles.priceCol}>
+          <div className={styles.ltp}>₹{price?.toLocaleString("en-IN")}</div>
+          <div className={styles.ltpLabel} style={{ color: "var(--yellow)" }}>
+            {pct_from_52w_high}% from 52W high
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.setupMeta}>
+        <div className={styles.setupRow}>
+          <span className={styles.setupLabel}>Signals firing</span>
+          <span className={styles.setupText}>{setup_summary}</span>
+        </div>
+        {watch_for && (
+          <div className={styles.setupRow}>
+            <span className={styles.setupLabel}>Watch for</span>
+            <span className={styles.watchForText}>{watch_for}</span>
+          </div>
+        )}
+      </div>
+
+      {(stop_loss || target) && (
+        <div className={styles.watchLevels}>
+          <span className={styles.levelGroupLabel}>Indicative levels — not triggered yet</span>
+          <div className={styles.riskBoxes}>
+            {stop_loss && (
+              <div className={styles.levelBox}>
+                <span className={styles.levelBoxLabel}>Stop Loss</span>
+                <span className={styles.levelBoxVal} style={{ color: "var(--red)" }}>
+                  ₹{stop_loss?.toLocaleString("en-IN")}
+                  {stop_pct && (
+                    <span className={styles.pctPill} style={{ background: "rgba(173,116,116,0.13)", color: "var(--red)" }}>
+                      −{stop_pct}%
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
+            {target && (
+              <div className={styles.levelBox}>
+                <span className={styles.levelBoxLabel}>Target (indicative)</span>
+                <span className={styles.levelBoxVal} style={{ color: "var(--accent)" }}>
+                  ₹{target?.toLocaleString("en-IN")}
+                  {target_pct && (
+                    <span className={styles.pctPill} style={{ background: "rgba(127,181,154,0.13)", color: "var(--accent)" }}>
+                      +{target_pct}%
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
+            {rr_ratio && (
+              <div className={styles.levelBox}>
+                <span className={styles.levelBoxLabel}>Risk : Reward</span>
+                <span className={styles.levelBoxVal}>1 : {rr_ratio}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className={styles.analysisSections}>
+        <div className={styles.analysisBlock} style={{ borderTop: "none" }}>
+          <span className={styles.analysisLabel}>Early Signals</span>
+          <div className={styles.signalList}>
+            {Object.entries(signals || {}).map(([name, data]) => (
+              <SetupSignalRow key={name} name={name} data={data} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NewsSection({ news }) {
+  const hasNews = news && news.length > 0;
+  return (
+    <div className={styles.analysisBlock}>
+      <span className={styles.analysisLabel}>News · last 30 days</span>
+      {!hasNews ? (
+        <p className={styles.noNews}>No news found in the last 30 days.</p>
+      ) : (
+        <ul className={styles.newsList}>
+          {news.map((item, i) => (
+            <li key={i} className={styles.newsItem}>
+              <span className={styles.newsMeta}>
+                {[item.publisher, item.date].filter(Boolean).join(" · ")}
+              </span>
+              <a href={item.url} target="_blank" rel="noopener noreferrer" className={styles.newsLink}>
+                {item.title}
+              </a>
+              {item.summary && <p className={styles.newsSummary}>{item.summary}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function PickCard({ pick, isTop }) {
+  const {
+    ticker, company, sector, score, signals, rationale,
+    stop_loss, stop_pct, target, target_pct,
+    entry_cmp, entry_breakout, atr_14, rr_ratio,
+    target_days_est,
+    screened_count, run_at, rank, news, fundamentals,
+    price,
+  } = pick;
+
+  const displayPrice = entry_cmp ?? price;
+  const runTime = run_at
+    ? new Date(run_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+    : "";
+  const rrDisplay = rr_ratio
+    ? `1 : ${rr_ratio}`
+    : (target && displayPrice && stop_loss)
+      ? `1 : ${((target - displayPrice) / (displayPrice - stop_loss)).toFixed(1)}`
+      : "—";
+
+  return (
+    <div className={`${styles.card} ${isTop ? styles.cardBest : ""}`}>
+
+      {/* Rank + meta */}
+      <div className={styles.cardHead}>
+        <span className={`${styles.rankBadge} ${isTop ? styles.rankBest : styles.rankOther}`}>
+          {RANK_LABELS[rank]}
+        </span>
+        <span className={styles.runMeta}>
+          {[runTime, screened_count && `${screened_count} stocks`].filter(Boolean).join(" · ")}
+        </span>
+      </div>
+
+      {/* Ticker + price */}
+      <div className={styles.stockRow}>
+        <div>
+          <div className={styles.tickerLine}>
+            <span className={styles.ticker}>{ticker}</span>
+            <span className={styles.sectorTag}>{sector}</span>
+          </div>
+          <div className={styles.company}>{company}</div>
+        </div>
+        <div className={styles.priceCol}>
+          <div className={styles.ltp}>₹{displayPrice?.toLocaleString("en-IN")}</div>
+          <div className={styles.ltpLabel}>LTP at screening</div>
+        </div>
+      </div>
+
+      <ScoreBar score={score} />
+
+      {/* Trade levels */}
+      <div className={styles.levelsSection}>
+
+        <div className={styles.entryGroup}>
+          <span className={styles.levelGroupLabel}>Entry</span>
+          <div className={styles.entryBoxes}>
+            <div className={styles.levelBox}>
+              <span className={styles.levelBoxLabel}>Enter at open</span>
+              <span className={styles.levelBoxVal}>₹{displayPrice?.toLocaleString("en-IN")}</span>
+            </div>
+            {entry_breakout && (
+              <div className={styles.levelBox}>
+                <span className={styles.levelBoxLabel}>Breakout buy-stop</span>
+                <span className={styles.levelBoxVal}>₹{entry_breakout?.toLocaleString("en-IN")}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className={styles.riskGroup}>
+          <span className={styles.levelGroupLabel}>Risk / Reward · ATR-based</span>
+          <div className={styles.riskBoxes}>
+            <div className={styles.levelBox}>
+              <span className={styles.levelBoxLabel}>Stop Loss</span>
+              <span className={styles.levelBoxVal} style={{ color: "var(--red)" }}>
+                ₹{stop_loss?.toLocaleString("en-IN")}
+                {stop_pct && (
+                  <span className={styles.pctPill} style={{ background: "rgba(173,116,116,0.13)", color: "var(--red)" }}>
+                    −{stop_pct}%
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className={styles.levelBox}>
+              <span className={styles.levelBoxLabel}>Target</span>
+              <span className={styles.levelBoxVal} style={{ color: "var(--accent)" }}>
+                ₹{target?.toLocaleString("en-IN")}
+                {target_pct && (
+                  <span className={styles.pctPill} style={{ background: "rgba(127,181,154,0.13)", color: "var(--accent)" }}>
+                    +{target_pct}%
+                  </span>
+                )}
+              </span>
+              {target_days_est && (
+                <span className={styles.levelBoxMeta}>~{target_days_est} trading days</span>
+              )}
+            </div>
+            <div className={styles.levelBox}>
+              <span className={styles.levelBoxLabel}>Risk : Reward</span>
+              <span className={styles.levelBoxVal}>{rrDisplay}</span>
+            </div>
+            {atr_14 && (
+              <div className={styles.levelBox}>
+                <span className={styles.levelBoxLabel}>ATR 14d</span>
+                <span className={styles.levelBoxVal}>₹{atr_14?.toLocaleString("en-IN")}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+
+      {/* Analysis sections */}
+      <div className={styles.analysisSections}>
+
+        <div className={styles.analysisBlock}>
+          <span className={styles.analysisLabel}>Technicals</span>
+          {rationale && <p className={styles.interpretText}>{rationale}</p>}
+          <div className={styles.signalList}>
+            {Object.entries(signals || {}).map(([name, data]) => (
+              <SignalRow key={name} name={name} data={data} />
+            ))}
+          </div>
+        </div>
+
+        <FundamentalsSection fundamentals={fundamentals} />
+        <NewsSection news={news} />
+
+      </div>
+    </div>
+  );
+}
+
+function LogPanel({ logs, onStop, screenStatus }) {
+  const bodyRef = useRef(null);
+  useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+  }, [logs]);
+
+  const isDone = ["done", "stopped", "error"].includes(screenStatus);
+
+  return (
+    <div className={styles.logWrap}>
+      <div className={styles.logHeader}>
+        <span className={styles.logTitle}>
+          {isDone ? "Screening complete" : <><span className={styles.spinnerSm} /> Running screener...</>}
+        </span>
+        {!isDone && (
+          <button className={styles.stopBtn} onClick={onStop}>■ Stop</button>
+        )}
+      </div>
+      <div className={styles.logBody} ref={bodyRef}>
+        {logs.map((line, i) => {
+          const isPick  = line.includes("=== Results") || /\s#[123]\s/.test(line);
+          const isOk    = line.includes("✓ READY");
+          const isSetup = line.includes("◈ SETUP");
+          const isSkip  = line.includes("skipped");
+          const isErr   = /error|Error|Abort/i.test(line);
+          const cls = isPick ? styles.logPick : isErr ? styles.logErr : isOk ? styles.logOk : isSetup ? styles.logSetup : isSkip ? styles.logSkip : styles.logLine;
+          return <div key={i} className={cls}>{line}</div>;
+        })}
+      </div>
+    </div>
+  );
+}
+
+export default function TodayPick() {
+  const [state, setState]               = useState("idle");
+  const [picks, setPicks]               = useState([]);
+  const [watchlist, setWatchlist]       = useState([]);
+  const [running, setRunning]           = useState(false);
+  const [logs, setLogs]                 = useState([]);
+  const [screenStatus, setScreenStatus] = useState("idle");
+  const pollRef = useRef(null);
+
+  const fetchPicks = async () => {
+    setState("loading");
+    try {
+      const res  = await fetch(`${API}/api/pick/today`);
+      const data = await res.json();
+      if (data.status === "ok" && data.picks?.length) {
+        setPicks(data.picks);
+        setState("ok");
+      } else {
+        setState("empty");
+      }
+    } catch {
+      setState("error");
+    }
+  };
+
+  const fetchWatchlist = async () => {
+    try {
+      const res  = await fetch(`${API}/api/watchlist/today`);
+      const data = await res.json();
+      if (data.status === "ok" && data.picks?.length) {
+        setWatchlist(data.picks);
+      } else {
+        setWatchlist([]);
+      }
+    } catch { /* ignore */ }
+  };
+
+  const stopPolling = () => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+  };
+
+  const stopScreen = async () => {
+    await fetch(`${API}/api/screen/stop`, { method: "POST" });
+  };
+
+  const runScreen = async () => {
+    setRunning(true);
+    setLogs([]);
+    setScreenStatus("running");
+    try {
+      await fetch(`${API}/api/screen/run`, { method: "POST" });
+    } catch {
+      setRunning(false);
+      setScreenStatus("error");
+      return;
+    }
+
+    pollRef.current = setInterval(async () => {
+      try {
+        const res  = await fetch(`${API}/api/screen/status`);
+        const data = await res.json();
+        setLogs(data.logs || []);
+        setScreenStatus(data.status);
+        if (data.status === "done") {
+          stopPolling();
+          setRunning(false);
+          await fetchPicks();
+          await fetchWatchlist();
+        } else if (data.status === "stopped" || data.status === "error") {
+          stopPolling();
+          setRunning(false);
+        }
+      } catch { /* network blip */ }
+    }, 1500);
+  };
+
+  useEffect(() => { fetchPicks(); fetchWatchlist(); return stopPolling; }, []);
+
+  const today = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" });
+
+  if (state === "loading") return (
+    <div className={styles.center}>
+      <div className={styles.spinner} />
+      <p className={styles.loadMsg}>Fetching today's picks...</p>
+    </div>
+  );
+
+  if (state === "error") return (
+    <div className={styles.center}>
+      <p className={styles.errorMsg}>Cannot reach backend. Is the server running on port 8001?</p>
+      <button className={styles.btn} onClick={fetchPicks}>Retry</button>
+    </div>
+  );
+
+  if (state === "empty" || state === "idle") return (
+    <div className={styles.center}>
+      {!running && (
+        <>
+          <div className={styles.emptyIcon}>◈</div>
+          <p className={styles.emptyHead}>No picks yet for {today}</p>
+          <p className={styles.emptyBody}>Run the screener to analyse Nifty 500 and surface today's top 3 setups.</p>
+        </>
+      )}
+      <button className={styles.btn} onClick={runScreen} disabled={running}>
+        {running ? "Running..." : "Run Screener"}
+      </button>
+      {running && <LogPanel logs={logs} onStop={stopScreen} screenStatus={screenStatus} />}
+      {!running && screenStatus === "stopped" && (
+        <p className={styles.runNote}>Screening stopped. Run again to get picks.</p>
+      )}
+    </div>
+  );
+
+  return (
+    <div className={styles.wrap}>
+      <div className={styles.topRow}>
+        <div>
+          <div className={styles.dateLabel}>{today}</div>
+          <div className={styles.headline}>Today's Top Picks</div>
+        </div>
+        <button className={styles.rerunBtn} onClick={runScreen} disabled={running} title="Re-run screener">
+          {running ? <span className={styles.spinnerSm} /> : "↺ Re-run"}
+        </button>
+      </div>
+
+      {running && <LogPanel logs={logs} onStop={stopScreen} screenStatus={screenStatus} />}
+
+      <div className={styles.pickList}>
+        {picks.map(pick => (
+          <PickCard key={pick.rank} pick={pick} isTop={pick.rank === 1} />
+        ))}
+      </div>
+
+      {watchlist.length > 0 && (
+        <div className={styles.watchlistSection}>
+          <div className={styles.watchlistHeader}>
+            <div className={styles.watchlistTitle}>Setting Up — Watch These</div>
+            <div className={styles.watchlistSub}>
+              Early signals firing. Wait for confirmation before entering.
+            </div>
+          </div>
+          <div className={styles.watchlistList}>
+            {watchlist.map(pick => (
+              <WatchlistCard key={pick.rank} pick={pick} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <p className={styles.disclaimer}>
+        Algorithmic screening output only. News sentiment is keyword-based. Not financial advice.
+      </p>
+    </div>
+  );
+}
