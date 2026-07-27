@@ -25,7 +25,8 @@
 
 .logoMark {
   color: var(--accent);
-  font-size: 16px;
+  display: block;
+  flex-shrink: 0;
 }
 
 .logoText {

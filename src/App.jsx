@@ -12,7 +12,10 @@ export default function App() {
     <div className={styles.shell}>
       <header className={styles.header}>
         <div className={styles.logo}>
-          <span className={styles.logoMark}>▲</span>
+          <svg className={styles.logoMark} width="22" height="20" viewBox="0 0 22 20" fill="none" aria-hidden="true">
+            <polyline points="1,18 8,10 14,5 20,1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <circle cx="20" cy="1" r="2.5" fill="currentColor"/>
+          </svg>
           <span className={styles.logoText}>STOCKPICK</span>
           <span className={styles.logoBadge}>AI</span>
         </div>
