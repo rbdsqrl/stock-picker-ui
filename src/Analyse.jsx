@@ -149,7 +149,15 @@ export default function Analyse() {
           {/* Overview */}
           <div className={styles.overview}>
             <div>
-              <div className={styles.overviewTicker}>{result.ticker}</div>
+              <div className={styles.overviewTicker}>
+                {result.ticker}
+                <a
+                  href={`https://www.tradingview.com/chart/?symbol=NSE:${result.ticker}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.tvLink}
+                >TradingView ↗</a>
+              </div>
               <div className={styles.overviewCompany}>{result.company}</div>
               <div className={styles.overviewMeta}>{result.sector} · NSE</div>
             </div>

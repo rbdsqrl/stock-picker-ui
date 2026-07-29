@@ -142,6 +142,12 @@
 .cellTicker {
   font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--yellow);
 }
+.tvLink {
+  font-size: 10px; color: var(--muted); text-decoration: none;
+  border: 1px solid var(--border); border-radius: 3px;
+  padding: 1px 4px; white-space: nowrap; margin-left: 4px;
+}
+.tvLink:hover { color: var(--accent2); border-color: var(--accent2); }
 .cellCompany {
   font-size: 12px; color: var(--muted);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

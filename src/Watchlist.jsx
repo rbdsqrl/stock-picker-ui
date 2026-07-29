@@ -63,7 +63,16 @@ function WatchlistRow({ pick, now }) {
         style={{ cursor: "pointer" }}
       >
         <span className={styles.rankBadge}>◈ #{rank}</span>
-        <span className={styles.cellTicker}>{ticker}</span>
+        <span className={styles.cellTicker}>
+          {ticker}
+          <a
+            href={`https://www.tradingview.com/chart/?symbol=NSE:${ticker}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.tvLink}
+            onClick={e => e.stopPropagation()}
+          >↗</a>
+        </span>
         <span className={styles.cellCompany}>{company}</span>
         <SignalPills signals={signals} />
         <span className={styles.cellMono}>{fmt(price_at_pick)}</span>

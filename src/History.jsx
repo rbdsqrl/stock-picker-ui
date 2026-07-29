@@ -33,10 +33,15 @@ function LevelCell({ price, pct, color }) {
   );
 }
 
-function HitCell({ hit, days, date, currentPrice, target }) {
+function HitCell({ hit, slHit, days, date, slDate, slDays, currentPrice, target }) {
   if (hit === 1) return (
     <span className={styles.hitYes} title={date ? `Hit on ${date}` : undefined}>
       ✓ {days != null ? `${days}d` : ""}
+    </span>
+  );
+  if (hit === 0 && slHit === 1) return (
+    <span className={styles.hitNo} title={slDate ? `SL hit on ${slDate}` : undefined}>
+      ✗ SL {slDays != null ? `${slDays}d` : ""}
     </span>
   );
   if (hit === 0) return <span className={styles.hitNo}>✗ missed</span>;
@@ -112,6 +117,10 @@ export default function History() {
     ? Math.round((top.filter(p => p.target_hit === 1).length / top.length) * 100)
     : null;
 
+  const totalHits    = picks.filter(p => p.target_hit === 1).length;
+  const totalMisses  = picks.filter(p => p.target_hit === 0).length;
+  const totalWaiting = picks.filter(p => p.target_hit == null).length;
+
   const fmtDate = (iso) => new Date(iso + "T00:00:00")
     .toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
@@ -135,6 +144,22 @@ export default function History() {
             {refreshing ? "Recalculating..." : "↺ Refresh"}
           </button>
         </div>
+      </div>
+
+      <div className={styles.statsBar}>
+        <div className={styles.statChip} style={{ borderColor: "rgba(74,222,128,0.3)" }}>
+          <span className={styles.statNum} style={{ color: "var(--accent)" }}>{totalHits}</span>
+          <span className={styles.statLabel}>Hits</span>
+        </div>
+        <div className={styles.statChip} style={{ borderColor: "rgba(248,113,113,0.3)" }}>
+          <span className={styles.statNum} style={{ color: "var(--red)" }}>{totalMisses}</span>
+          <span className={styles.statLabel}>Misses</span>
+        </div>
+        <div className={styles.statChip}>
+          <span className={styles.statNum} style={{ color: "var(--yellow)" }}>{totalWaiting}</span>
+          <span className={styles.statLabel}>Waiting</span>
+        </div>
+        <span className={styles.statNote}>Picks expire as failed after 45 days if target not reached and SL not hit.</span>
       </div>
 
       {refreshResult && (
@@ -166,11 +191,28 @@ export default function History() {
                   <span className={`${styles.rankBadge} ${p.rank === 1 ? styles.rankBest : styles.rankOther}`}>
                     {RANK_LABEL[p.rank] ?? `#${p.rank}`}
                   </span>
-                  <span className={styles.cellTicker}>{p.ticker}</span>
+                  <span className={styles.cellTicker}>
+                    {p.ticker}
+                    <a
+                      href={`https://www.tradingview.com/chart/?symbol=NSE:${p.ticker}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.tvLink}
+                    >↗</a>
+                  </span>
                   <span className={styles.cellMono}>{fmt(p.price_at_pick)}</span>
                   <LevelCell price={p.target}    pct={p.target_pct ?? null}                color="var(--accent)" />
                   <LevelCell price={p.stop_loss} pct={p.stop_pct  ? -p.stop_pct : null}   color="var(--red)" />
-                  <HitCell hit={p.target_hit} days={p.target_hit_days} date={p.target_hit_date} currentPrice={prices[p.ticker]} target={p.target} />
+                  <HitCell
+                    hit={p.target_hit}
+                    slHit={p.sl_hit}
+                    days={p.target_hit_days}
+                    date={p.target_hit_date}
+                    slDate={p.sl_hit_date}
+                    slDays={p.sl_hit_days}
+                    currentPrice={prices[p.ticker]}
+                    target={p.target}
+                  />
                   <NowCell entry={p.price_at_pick} now={prices[p.ticker]} />
                 </div>
               );

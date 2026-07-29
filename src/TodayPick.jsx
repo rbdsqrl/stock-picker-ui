@@ -20,7 +20,7 @@ const EARLY_SIGNAL_META = {
   rel_strength:     "Rel. Strength",
 };
 
-const RANK_LABELS = ["", "#1 Best Pick", "#2 Runner-Up", "#3 Watch List"];
+const RANK_LABELS = ["", "#1 Best Pick", "#2 Runner-Up", "#3", "#4", "#5"];
 
 function ScoreBar({ score }) {
   const pct = ((score + 1) / 2) * 100;
@@ -168,6 +168,12 @@ function WatchlistCard({ pick }) {
           <div className={styles.tickerLine}>
             <span className={styles.watchTicker}>{ticker}</span>
             <span className={styles.sectorTag}>{sector}</span>
+            <a
+              href={`https://www.tradingview.com/chart/?symbol=NSE:${ticker}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.tvLink}
+            >TradingView ↗</a>
           </div>
           <div className={styles.company}>{company}</div>
         </div>
@@ -311,6 +317,12 @@ function PickCard({ pick, isTop }) {
           <div className={styles.tickerLine}>
             <span className={styles.ticker}>{ticker}</span>
             <span className={styles.sectorTag}>{sector}</span>
+            <a
+              href={`https://www.tradingview.com/chart/?symbol=NSE:${ticker}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.tvLink}
+            >TradingView ↗</a>
           </div>
           <div className={styles.company}>{company}</div>
         </div>
@@ -441,7 +453,6 @@ function LogPanel({ logs, onStop, screenStatus }) {
 export default function TodayPick() {
   const [state, setState]               = useState("idle");
   const [picks, setPicks]               = useState([]);
-  const [watchlist, setWatchlist]       = useState([]);
   const [running, setRunning]           = useState(false);
   const [logs, setLogs]                 = useState([]);
   const [screenStatus, setScreenStatus] = useState("idle");
@@ -461,18 +472,6 @@ export default function TodayPick() {
     } catch {
       setState("error");
     }
-  };
-
-  const fetchWatchlist = async () => {
-    try {
-      const res  = await fetch(`${API}/api/watchlist/today`);
-      const data = await res.json();
-      if (data.status === "ok" && data.picks?.length) {
-        setWatchlist(data.picks);
-      } else {
-        setWatchlist([]);
-      }
-    } catch { /* ignore */ }
   };
 
   const stopPolling = () => {
@@ -505,7 +504,6 @@ export default function TodayPick() {
           stopPolling();
           setRunning(false);
           await fetchPicks();
-          await fetchWatchlist();
         } else if (data.status === "stopped" || data.status === "error") {
           stopPolling();
           setRunning(false);
@@ -514,7 +512,7 @@ export default function TodayPick() {
     }, 1500);
   };
 
-  useEffect(() => { fetchPicks(); fetchWatchlist(); return stopPolling; }, []);
+  useEffect(() => { fetchPicks(); return stopPolling; }, []);
 
   const today = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" });
 
@@ -570,22 +568,6 @@ export default function TodayPick() {
           <PickCard key={pick.rank} pick={pick} isTop={pick.rank === 1} />
         ))}
       </div>
-
-      {watchlist.length > 0 && (
-        <div className={styles.watchlistSection}>
-          <div className={styles.watchlistHeader}>
-            <div className={styles.watchlistTitle}>Setting Up — Watch These</div>
-            <div className={styles.watchlistSub}>
-              Early signals firing. Wait for confirmation before entering.
-            </div>
-          </div>
-          <div className={styles.watchlistList}>
-            {watchlist.map(pick => (
-              <WatchlistCard key={pick.rank} pick={pick} />
-            ))}
-          </div>
-        </div>
-      )}
 
       <p className={styles.disclaimer}>
         Algorithmic screening output only. News sentiment is keyword-based. Not financial advice.
