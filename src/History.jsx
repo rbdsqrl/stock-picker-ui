@@ -33,19 +33,27 @@ function LevelCell({ price, pct, color }) {
   );
 }
 
-function HitCell({ hit, slHit, days, date, slDate, slDays, currentPrice, target }) {
+function HitCell({ hit, slHit, days, date, slDate, slDays, currentPrice, target,
+                   t1Hit, t1Date, t1Days }) {
   if (hit === 1) return (
-    <span className={styles.hitYes} title={date ? `Hit on ${date}` : undefined}>
+    <span className={styles.hitYes} title={date ? `T2 hit on ${date}` : undefined}>
       ✓ {days != null ? `${days}d` : ""}
     </span>
   );
   if (hit === 0 && slHit === 1) return (
-    <span className={styles.hitNo} title={slDate ? `SL hit on ${slDate}` : undefined}>
-      ✗ SL {slDays != null ? `${slDays}d` : ""}
+    <span className={styles.hitNo}
+          title={`${slDate ? `SL closed below on ${slDate}` : "Stopped out"}${t1Hit === 1 ? " — T1 was reached first" : ""}`}>
+      ✗ SL {slDays != null ? `${slDays}d` : ""}{t1Hit === 1 ? " ·T1" : ""}
     </span>
   );
   if (hit === 0) return <span className={styles.hitNo}>✗ missed</span>;
-  if (hit == null && currentPrice != null && target != null && currentPrice >= target)
+  // Still open, but the short target is already in hand — the move is underway.
+  if (t1Hit === 1) return (
+    <span className={styles.hitT1} title={t1Date ? `T1 reached on ${t1Date} — T2 still open` : undefined}>
+      ◐ T1 {t1Days != null ? `${t1Days}d` : ""}
+    </span>
+  );
+  if (currentPrice != null && target != null && currentPrice >= target)
     return <span className={styles.hitLive} title="Live price at or above target — will confirm on next refresh">↑ live</span>;
   return <span className={styles.hitPending}>—</span>;
 }
@@ -120,6 +128,8 @@ export default function History() {
   const totalHits    = picks.filter(p => p.target_hit === 1).length;
   const totalMisses  = picks.filter(p => p.target_hit === 0).length;
   const totalWaiting = picks.filter(p => p.target_hit == null).length;
+  // Open picks that already tagged the short target — the move is underway.
+  const totalT1Open  = picks.filter(p => p.target_hit == null && p.target_short_hit === 1).length;
 
   const fmtDate = (iso) => new Date(iso + "T00:00:00")
     .toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -159,14 +169,18 @@ export default function History() {
           <span className={styles.statNum} style={{ color: "var(--yellow)" }}>{totalWaiting}</span>
           <span className={styles.statLabel}>Waiting</span>
         </div>
-        <span className={styles.statNote}>A pick is a miss if it closes below the SL before the target is reached, or if 45 days pass with neither level hit.</span>
+        <div className={styles.statChip} style={{ borderColor: "rgba(74,222,128,0.3)" }}>
+          <span className={styles.statNum} style={{ color: "var(--accent)", opacity: 0.72 }}>{totalT1Open}</span>
+          <span className={styles.statLabel}>T1 in play</span>
+        </div>
+        <span className={styles.statNote}>T1 (1× risk) confirms the move is underway; T2 (2× risk) resolves the pick. A miss is a close below the SL before T2, or 45 days with neither hit.</span>
       </div>
 
       {refreshResult && (
         <div className={refreshResult.error || (refreshResult.failed && refreshResult.failed.length) ? styles.refreshError : styles.refreshOk}>
           {refreshResult.error
             ? refreshResult.error
-            : `Re-resolved ${refreshResult.hits} hit(s), ${refreshResult.misses} miss(es), ${refreshResult.pending} still open — ${refreshResult.hits_updated} outcome(s) changed.${refreshResult.failed?.length ? ` Skipped (fetch error): ${refreshResult.failed.join(", ")}` : ""}`
+            : `Re-resolved ${refreshResult.hits} hit(s), ${refreshResult.misses} miss(es), ${refreshResult.pending} still open (${refreshResult.t1_hits} reached T1) — ${refreshResult.hits_updated} outcome(s) changed.${refreshResult.failed?.length ? ` Skipped (fetch error): ${refreshResult.failed.join(", ")}` : ""}`
           }
         </div>
       )}
@@ -176,7 +190,8 @@ export default function History() {
           <span>Rank</span>
           <span>Ticker</span>
           <span>Entry</span>
-          <span>Target</span>
+          <span>T1 short</span>
+          <span>T2 long</span>
           <span>SL</span>
           <span>Hit?</span>
           <span>Now ●</span>
@@ -201,6 +216,7 @@ export default function History() {
                     >↗</a>
                   </span>
                   <span className={styles.cellMono}>{fmt(p.price_at_pick)}</span>
+                  <LevelCell price={p.target_short} pct={p.target_short_pct ?? null}      color="var(--accent)" />
                   <LevelCell price={p.target}    pct={p.target_pct ?? null}                color="var(--accent)" />
                   <LevelCell price={p.stop_loss} pct={p.stop_pct  ? -p.stop_pct : null}   color="var(--red)" />
                   <HitCell
@@ -210,6 +226,9 @@ export default function History() {
                     date={p.target_hit_date}
                     slDate={p.sl_hit_date}
                     slDays={p.sl_hit_days}
+                    t1Hit={p.target_short_hit}
+                    t1Date={p.target_short_hit_date}
+                    t1Days={p.target_short_hit_days}
                     currentPrice={prices[p.ticker]}
                     target={p.target}
                   />
@@ -222,9 +241,9 @@ export default function History() {
       </div>
 
       <p className={styles.note}>
-        "Now" and target outcomes refresh on every page load. Hit? marks ✓ when the daily high crossed the target before
-        a daily close fell below the SL. Scoring starts the session after the pick date, and an intraday wick through the
-        SL that recovers by the close does not count as a stop-out.
+        "Now" and target outcomes refresh on every page load. Hit? marks ✓ when the daily high crossed T2 before a daily
+        close fell below the SL, and ◐ T1 when the short target is already in hand with T2 still open. Scoring starts the
+        session after the pick date, and an intraday wick through the SL that recovers by the close is not a stop-out.
       </p>
     </div>
   );

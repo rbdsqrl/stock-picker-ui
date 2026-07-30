@@ -63,11 +63,11 @@
   overflow: hidden;
 }
 
-/* 7 cols: Rank | Ticker | Entry | Target | SL | Hit? | Now */
+/* 8 cols: Rank | Ticker | Entry | T1 | T2 | SL | Hit? | Now */
 .tableHead,
 .tableRow {
   display: grid;
-  grid-template-columns: 40px 1fr 86px 114px 110px 76px 124px;
+  grid-template-columns: 40px 1fr 82px 104px 104px 100px 84px 116px;
   padding: 0 20px;
   align-items: center;
 }
@@ -152,6 +152,8 @@
 .hitNo      { font-family: var(--mono); font-size: 11px; color: var(--red); }
 .hitPending { font-family: var(--mono); font-size: 11px; color: var(--muted); }
 .hitLive    { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--yellow); white-space: nowrap; }
+/* T1 reached, T2 still open — thesis confirmed but not yet resolved */
+.hitT1      { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--accent); opacity: 0.72; white-space: nowrap; }
 
 /* ── Footer ───────────────────────────────────────────────────────────────── */
 .note {
