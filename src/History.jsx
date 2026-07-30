@@ -159,7 +159,7 @@ export default function History() {
           <span className={styles.statNum} style={{ color: "var(--yellow)" }}>{totalWaiting}</span>
           <span className={styles.statLabel}>Waiting</span>
         </div>
-        <span className={styles.statNote}>A pick is a miss if the SL is touched before the target, or if 45 days pass with neither level hit.</span>
+        <span className={styles.statNote}>A pick is a miss if it closes below the SL before the target is reached, or if 45 days pass with neither level hit.</span>
       </div>
 
       {refreshResult && (
@@ -223,7 +223,8 @@ export default function History() {
 
       <p className={styles.note}>
         "Now" and target outcomes refresh on every page load. Hit? marks ✓ when the daily high crossed the target before
-        the daily low touched the SL. If one day touches both, it counts as an SL miss.
+        a daily close fell below the SL. Scoring starts the session after the pick date, and an intraday wick through the
+        SL that recovers by the close does not count as a stop-out.
       </p>
     </div>
   );
