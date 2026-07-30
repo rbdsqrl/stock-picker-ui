@@ -141,7 +141,7 @@ export default function History() {
             </div>
           )}
           <button className={styles.refreshBtn} onClick={forceRefresh} disabled={refreshing}>
-            {refreshing ? "Recalculating..." : "↺ Refresh"}
+            {refreshing ? "Re-scoring..." : "↺ Refresh"}
           </button>
         </div>
       </div>
@@ -159,14 +159,14 @@ export default function History() {
           <span className={styles.statNum} style={{ color: "var(--yellow)" }}>{totalWaiting}</span>
           <span className={styles.statLabel}>Waiting</span>
         </div>
-        <span className={styles.statNote}>Picks expire as failed after 45 days if target not reached and SL not hit.</span>
+        <span className={styles.statNote}>A pick is a miss if the SL is touched before the target, or if 45 days pass with neither level hit.</span>
       </div>
 
       {refreshResult && (
         <div className={refreshResult.error || (refreshResult.failed && refreshResult.failed.length) ? styles.refreshError : styles.refreshOk}>
           {refreshResult.error
             ? refreshResult.error
-            : `Updated ${refreshResult.hits_updated} outcome(s).${refreshResult.failed?.length ? ` Skipped (fetch error): ${refreshResult.failed.join(", ")}` : ""}`
+            : `Re-resolved ${refreshResult.hits} hit(s), ${refreshResult.misses} miss(es), ${refreshResult.pending} still open — ${refreshResult.hits_updated} outcome(s) changed.${refreshResult.failed?.length ? ` Skipped (fetch error): ${refreshResult.failed.join(", ")}` : ""}`
           }
         </div>
       )}
@@ -222,7 +222,8 @@ export default function History() {
       </div>
 
       <p className={styles.note}>
-        "Now" and target outcomes refresh on every page load. Hit? marks ✓ when the stock's daily high crossed the target.
+        "Now" and target outcomes refresh on every page load. Hit? marks ✓ when the daily high crossed the target before
+        the daily low touched the SL. If one day touches both, it counts as an SL miss.
       </p>
     </div>
   );
