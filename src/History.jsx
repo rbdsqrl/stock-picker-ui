@@ -37,13 +37,27 @@ function HitCell({ hit, slHit, days, date, slDate, slDays, currentPrice, target,
                    t1Hit, t1Date, t1Days }) {
   if (hit === 1) return (
     <span className={styles.hitYes} title={date ? `T2 hit on ${date}` : undefined}>
-      ✓ {days != null ? `${days}d` : ""}
+      ✓ T2 {days != null ? `${days}d` : ""}
+    </span>
+  );
+  // T1 is a high touch and the SL is judged on the close, so on any bar where both
+  // register the T1 touch necessarily came first. A pick that reached T1 banked that
+  // gain before it was stopped — that is a T1 hit, not a plain stop-out.
+  if (slHit === 1 && t1Hit === 1) return (
+    <span className={styles.hitT1Won}
+          title={`T1 hit on ${t1Date} — before the SL closed below on ${slDate}`}>
+      ✓ T1 {t1Days != null ? `${t1Days}d` : ""} · SL
     </span>
   );
   if (hit === 0 && slHit === 1) return (
-    <span className={styles.hitNo}
-          title={`${slDate ? `SL closed below on ${slDate}` : "Stopped out"}${t1Hit === 1 ? " — T1 was reached first" : ""}`}>
-      ✗ SL {slDays != null ? `${slDays}d` : ""}{t1Hit === 1 ? " ·T1" : ""}
+    <span className={styles.hitNo} title={slDate ? `SL closed below on ${slDate}` : "Stopped out"}>
+      ✗ SL {slDays != null ? `${slDays}d` : ""}
+    </span>
+  );
+  // Expired at 45 days. T1 may still have been reached along the way.
+  if (hit === 0 && t1Hit === 1) return (
+    <span className={styles.hitT1Won} title={`T1 hit on ${t1Date} — T2 never reached, expired at 45d`}>
+      ✓ T1 {t1Days != null ? `${t1Days}d` : ""} · exp
     </span>
   );
   if (hit === 0) return <span className={styles.hitNo}>✗ missed</span>;
@@ -241,9 +255,10 @@ export default function History() {
       </div>
 
       <p className={styles.note}>
-        "Now" and target outcomes refresh on every page load. Hit? marks ✓ when the daily high crossed T2 before a daily
-        close fell below the SL, and ◐ T1 when the short target is already in hand with T2 still open. Scoring starts the
-        session after the pick date, and an intraday wick through the SL that recovers by the close is not a stop-out.
+        "Now" and target outcomes refresh on every page load. Hit? shows ✓ T2 when the daily high crossed the long target
+        before a close fell below the SL, ✓ T1 when the short target was banked before the pick closed out on the SL (·SL)
+        or the 45-day expiry (·exp), and ◐ T1 while T1 is in hand with T2 still open. Scoring starts the session after the
+        pick date, and an intraday wick through the SL that recovers by the close is not a stop-out.
       </p>
     </div>
   );
