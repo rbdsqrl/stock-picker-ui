@@ -93,6 +93,15 @@
   display: flex; align-items: center; gap: 10px;
 }
 
+/* Why the score came out where it did — the weighted arithmetic behind the badge */
+.scoreBasis {
+  margin: 8px 0 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 /* ── Signal cards ─────────────────────────────────────────────────────────── */
 .signalGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
 

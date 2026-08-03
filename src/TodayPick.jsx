@@ -22,19 +22,22 @@ const EARLY_SIGNAL_META = {
 
 const RANK_LABELS = ["", "#1 Best Pick", "#2 Runner-Up", "#3", "#4", "#5"];
 
-function ScoreBar({ score }) {
+function ScoreBar({ score, basis }) {
   const pct = ((score + 1) / 2) * 100;
   const color = pct >= 65 ? "var(--accent)" : pct >= 45 ? "var(--yellow)" : "var(--red)";
   return (
-    <div className={styles.scoreRow}>
-      <span className={styles.scoreLabel}>Composite Score</span>
-      <div className={styles.scoreTrack}>
-        <div className={styles.scoreFill} style={{ width: `${pct}%`, background: color }} />
+    <>
+      <div className={styles.scoreRow}>
+        <span className={styles.scoreLabel}>Composite Score</span>
+        <div className={styles.scoreTrack}>
+          <div className={styles.scoreFill} style={{ width: `${pct}%`, background: color }} />
+        </div>
+        <span className={styles.scoreNum} style={{ color }}>
+          {score >= 0 ? "+" : ""}{(score * 100).toFixed(0)}
+        </span>
       </div>
-      <span className={styles.scoreNum} style={{ color }}>
-        {score >= 0 ? "+" : ""}{(score * 100).toFixed(0)}
-      </span>
-    </div>
+      {basis && <p className={styles.scoreBasis}>{basis}</p>}
+    </>
   );
 }
 
@@ -332,7 +335,7 @@ function PickCard({ pick, isTop }) {
         </div>
       </div>
 
-      <ScoreBar score={score} />
+      <ScoreBar score={score} basis={pick.score_basis} />
 
       {/* Trade levels */}
       <div className={styles.levelsSection}>

@@ -170,6 +170,7 @@ export default function Analyse() {
           {/* Signal Cards */}
           <section className={styles.section}>
             <div className={styles.sectionLabel}>TECHNICAL SIGNALS</div>
+            {result.score_basis && <p className={styles.scoreBasis}>{result.score_basis}</p>}
             <div className={styles.signalGrid}>
               <SignalCard
                 name="TREND"
