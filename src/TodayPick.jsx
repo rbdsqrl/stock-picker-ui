@@ -412,6 +412,13 @@ function PickCard({ pick, isTop }) {
           </div>
         </div>
 
+        {pick.valuation?.summary && (
+          <div className={styles.analysisBlock}>
+            <span className={styles.analysisLabel}>Valuation case</span>
+            <p className={styles.interpretText}>{pick.valuation.summary}</p>
+          </div>
+        )}
+
         <FundamentalsSection fundamentals={fundamentals} />
         <NewsSection news={news} />
 

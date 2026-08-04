@@ -285,6 +285,13 @@ export default function Analyse() {
           </section>
 
           {/* Analyst Note */}
+          {result.valuation?.summary && (
+            <section className={styles.section}>
+              <div className={styles.sectionLabel}>VALUATION CASE</div>
+              <p className={styles.rationale}>{result.valuation.summary}</p>
+            </section>
+          )}
+
           {result.rationale && (
             <section className={styles.section}>
               <div className={styles.sectionLabel}>ANALYST NOTE</div>
