@@ -78,6 +78,7 @@ export default function History() {
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshResult, setRefreshResult] = useState(null);
+  const [statFilter, setStatFilter] = useState(null);
 
   const loadPrices = async (rows) => {
     const tickers = [...new Set(rows.map(p => p.ticker))];
@@ -127,23 +128,35 @@ export default function History() {
     </div>
   );
 
-  const byDate = [];
-  const seen   = {};
-  for (const p of picks) {
-    if (!seen[p.date]) { seen[p.date] = []; byDate.push({ date: p.date, rows: seen[p.date] }); }
-    seen[p.date].push(p);
-  }
-
   const top     = picks.filter(p => p.rank === 1 && p.target_hit != null);
   const hitRate = top.length > 0
     ? Math.round((top.filter(p => p.target_hit === 1).length / top.length) * 100)
     : null;
 
-  const totalHits    = picks.filter(p => p.target_hit === 1).length;
-  const totalMisses  = picks.filter(p => p.target_hit === 0).length;
-  const totalWaiting = picks.filter(p => p.target_hit == null).length;
-  // Open picks that already tagged the short target — the move is underway.
-  const totalT1Open  = picks.filter(p => p.target_hit == null && p.target_short_hit === 1).length;
+  // Each stat chip doubles as a filter over the table below, so the counts stay the
+  // way you drill into them. Predicates live here so the number on the chip and the
+  // rows it reveals can never drift apart.
+  const STAT_FILTERS = [
+    { key: "hits",    label: "Hits",       color: "var(--accent)", border: "rgba(74,222,128,0.3)",
+      match: p => p.target_hit === 1 },
+    { key: "misses",  label: "Misses",     color: "var(--red)",    border: "rgba(248,113,113,0.3)",
+      match: p => p.target_hit === 0 },
+    { key: "waiting", label: "Waiting",    color: "var(--yellow)", border: null,
+      match: p => p.target_hit == null },
+    // Open picks that already tagged the short target — the move is underway.
+    { key: "t1",      label: "T1 in play", color: "var(--accent)", border: "rgba(74,222,128,0.3)",
+      opacity: 0.72, match: p => p.target_hit == null && p.target_short_hit === 1 },
+  ];
+
+  const active   = STAT_FILTERS.find(f => f.key === statFilter);
+  const shown    = active ? picks.filter(active.match) : picks;
+
+  const byDate = [];
+  const seen   = {};
+  for (const p of shown) {
+    if (!seen[p.date]) { seen[p.date] = []; byDate.push({ date: p.date, rows: seen[p.date] }); }
+    seen[p.date].push(p);
+  }
 
   const fmtDate = (iso) => new Date(iso + "T00:00:00")
     .toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -171,23 +184,32 @@ export default function History() {
       </div>
 
       <div className={styles.statsBar}>
-        <div className={styles.statChip} style={{ borderColor: "rgba(74,222,128,0.3)" }}>
-          <span className={styles.statNum} style={{ color: "var(--accent)" }}>{totalHits}</span>
-          <span className={styles.statLabel}>Hits</span>
-        </div>
-        <div className={styles.statChip} style={{ borderColor: "rgba(248,113,113,0.3)" }}>
-          <span className={styles.statNum} style={{ color: "var(--red)" }}>{totalMisses}</span>
-          <span className={styles.statLabel}>Misses</span>
-        </div>
-        <div className={styles.statChip}>
-          <span className={styles.statNum} style={{ color: "var(--yellow)" }}>{totalWaiting}</span>
-          <span className={styles.statLabel}>Waiting</span>
-        </div>
-        <div className={styles.statChip} style={{ borderColor: "rgba(74,222,128,0.3)" }}>
-          <span className={styles.statNum} style={{ color: "var(--accent)", opacity: 0.72 }}>{totalT1Open}</span>
-          <span className={styles.statLabel}>T1 in play</span>
-        </div>
-        <span className={styles.statNote}>T1 (1× risk) confirms the move is underway; T2 (2× risk) resolves the pick. A miss is a close below the SL before T2, or 45 days with neither hit.</span>
+        {STAT_FILTERS.map(f => {
+          const count = picks.filter(f.match).length;
+          const on    = statFilter === f.key;
+          return (
+            <button
+              key={f.key}
+              type="button"
+              aria-pressed={on}
+              title={on ? `Showing ${f.label.toLowerCase()} only — click to clear` : `Show ${f.label.toLowerCase()} only`}
+              className={`${styles.statChip} ${on ? styles.statChipOn : ""}`}
+              style={f.border ? { borderColor: f.border } : undefined}
+              onClick={() => setStatFilter(on ? null : f.key)}
+            >
+              <span className={styles.statNum} style={{ color: f.color, opacity: f.opacity }}>{count}</span>
+              <span className={styles.statLabel}>{f.label}</span>
+            </button>
+          );
+        })}
+        {active
+          ? (
+            <button type="button" className={styles.filterClear} onClick={() => setStatFilter(null)}>
+              {shown.length} of {picks.length} shown · clear filter ✕
+            </button>
+          )
+          : <span className={styles.statNote}>T1 (1× risk) confirms the move is underway; T2 (2× risk) resolves the pick. A miss is a close below the SL before T2, or 45 days with neither hit.</span>
+        }
       </div>
 
       {refreshResult && (
@@ -210,6 +232,10 @@ export default function History() {
           <span>Hit?</span>
           <span>Now ●</span>
         </div>
+
+        {active && !byDate.length && (
+          <div className={styles.noMatch}>No picks are {active.label.toLowerCase()} right now.</div>
+        )}
 
         {byDate.map(({ date, rows }) => (
           <div key={date} className={styles.dateGroup}>
