@@ -227,6 +227,13 @@
   font-family: var(--mono); font-size: 11px; color: var(--muted);
 }
 .logTitle { display: flex; align-items: center; gap: 8px; }
+.attachedNote {
+  padding: 7px 12px;
+  background: rgba(154, 120, 32, 0.08);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 10px; line-height: 1.6;
+  color: var(--yellow);
+}
 .logBody  {
   background: var(--bg); padding: 8px 12px;
   height: 240px; overflow-y: auto;

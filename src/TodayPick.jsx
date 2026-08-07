@@ -11,15 +11,6 @@ const SIGNAL_META = {
   rel_strength: "Rel. Strength",
 };
 
-const EARLY_SIGNAL_META = {
-  higher_lows:      "Higher Lows",
-  macd_crossover:   "MACD",
-  rsi_recovery:     "RSI Recovery",
-  obv_accumulation: "OBV Trend",
-  bb_squeeze:       "BB Squeeze",
-  rel_strength:     "Rel. Strength",
-};
-
 const RANK_LABELS = ["", "#1 Best Pick", "#2 Runner-Up", "#3", "#4", "#5"];
 
 function ScoreBar({ score, basis }) {
@@ -104,45 +95,6 @@ function FundamentalsSection({ fundamentals: f }) {
           </span>
         ))}
       </div>
-    </div>
-  );
-}
-
-function SetupSignalRow({ name, data }) {
-  const label = EARLY_SIGNAL_META[name] || name;
-  const s     = data?.score ?? 0;
-  const dotCls = s === 1 ? styles.dotAmber : s === -1 ? styles.dotRed : styles.dotNeutral;
-
-  let detail = "";
-  if (name === "higher_lows") {
-    if (data.higher_lows != null) {
-      detail = data.higher_lows
-        ? (data.tight_base ? `Ascending · Base ${data.range_20d_pct}% wide` : `Ascending lows · ${data.range_20d_pct}% range`)
-        : `No ascending lows · ${data.range_20d_pct}% range`;
-    }
-  } else if (name === "macd_crossover") {
-    detail = data.just_crossed
-      ? "Just crossed positive"
-      : data.hist_pct != null ? `Hist ${data.hist_pct > 0 ? "+" : ""}${data.hist_pct}%` : "";
-  } else if (name === "rsi_recovery") {
-    detail = data.rsi != null ? `RSI ${data.rsi} · 10d low ${data.rsi_10d_low}` : "";
-  } else if (name === "obv_accumulation") {
-    detail = data.obv_chg_pct != null
-      ? `OBV ${data.obv_chg_pct > 0 ? "+" : ""}${data.obv_chg_pct}% · Price ${data.price_chg_pct > 0 ? "+" : ""}${data.price_chg_pct}%`
-      : "";
-  } else if (name === "bb_squeeze") {
-    detail = data.bb_pct_rank != null ? `Width rank: ${data.bb_pct_rank}th pctile` : "";
-  } else if (name === "rel_strength") {
-    detail = data.rel_strength != null
-      ? `${data.rel_strength > 0 ? "+" : ""}${data.rel_strength}% vs Nifty`
-      : "";
-  }
-
-  return (
-    <div className={styles.signalRow}>
-      <span className={`${styles.dot} ${dotCls}`} />
-      <span className={styles.signalName}>{label}</span>
-      <span className={styles.signalVal}>{detail}</span>
     </div>
   );
 }
@@ -319,7 +271,7 @@ function PickCard({ pick, isTop }) {
   );
 }
 
-function LogPanel({ logs, onStop, screenStatus }) {
+function LogPanel({ logs, onStop, screenStatus, attached }) {
   const bodyRef = useRef(null);
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
@@ -331,12 +283,21 @@ function LogPanel({ logs, onStop, screenStatus }) {
     <div className={styles.logWrap}>
       <div className={styles.logHeader}>
         <span className={styles.logTitle}>
-          {isDone ? "Screening complete" : <><span className={styles.spinnerSm} /> Running screener...</>}
+          {isDone
+            ? "Screening complete"
+            : <><span className={styles.spinnerSm} />
+                {attached ? " Following the run in progress..." : " Running screener..."}</>}
         </span>
         {!isDone && (
           <button className={styles.stopBtn} onClick={onStop}>■ Stop</button>
         )}
       </div>
+      {attached && !isDone && (
+        <div className={styles.attachedNote}>
+          A screening run was already under way, so this is following it rather than
+          starting a second one — the screen is the same for everybody.
+        </div>
+      )}
       <div className={styles.logBody} ref={bodyRef}>
         {logs.map((line, i) => {
           const isPick  = line.includes("=== Results") || /\s#[123]\s/.test(line);
@@ -357,6 +318,8 @@ export default function TodayPick() {
   const [running, setRunning]           = useState(false);
   const [logs, setLogs]                 = useState([]);
   const [screenStatus, setScreenStatus] = useState("idle");
+  // True when we joined a run someone else (or the scheduler) started.
+  const [attached, setAttached]         = useState(false);
   const pollRef = useRef(null);
 
   const fetchPicks = async () => {
@@ -383,18 +346,10 @@ export default function TodayPick() {
     await fetch(`${API}/api/screen/stop`, { method: "POST" });
   };
 
-  const runScreen = async () => {
-    setRunning(true);
-    setLogs([]);
-    setScreenStatus("running");
-    try {
-      await fetch(`${API}/api/screen/run`, { method: "POST" });
-    } catch {
-      setRunning(false);
-      setScreenStatus("error");
-      return;
-    }
-
+  // Follow the run that is in flight. Safe to call more than once — it never opens a
+  // second poller, so attaching on mount and on a click cannot stack.
+  const followRun = () => {
+    if (pollRef.current) return;
     pollRef.current = setInterval(async () => {
       try {
         const res  = await fetch(`${API}/api/screen/status`);
@@ -404,16 +359,61 @@ export default function TodayPick() {
         if (data.status === "done") {
           stopPolling();
           setRunning(false);
+          setAttached(false);
           await fetchPicks();
         } else if (data.status === "stopped" || data.status === "error") {
           stopPolling();
           setRunning(false);
+          setAttached(false);
         }
       } catch { /* network blip */ }
     }, 1500);
   };
 
-  useEffect(() => { fetchPicks(); return stopPolling; }, []);
+  const runScreen = async () => {
+    setRunning(true);
+    setScreenStatus("running");
+    try {
+      const res  = await fetch(`${API}/api/screen/run`, { method: "POST" });
+      const data = await res.json();
+      // The screen is identical for every user and costs ~500 upstream fetches, so
+      // the server hands back the run already in progress rather than starting a
+      // second one. Show that run's logs instead of pretending we started fresh.
+      if (data.status === "already_running") {
+        setAttached(true);
+        setLogs(data.logs || []);
+      } else {
+        setAttached(false);
+        setLogs([]);
+      }
+    } catch {
+      setRunning(false);
+      setScreenStatus("error");
+      return;
+    }
+    followRun();
+  };
+
+  useEffect(() => {
+    fetchPicks();
+    // A run may already be under way when the page opens — started by the scheduler
+    // or by somebody else. Show it rather than offering a button that would just
+    // attach to it anyway.
+    (async () => {
+      try {
+        const res  = await fetch(`${API}/api/screen/status`);
+        const data = await res.json();
+        if (data.status === "running") {
+          setRunning(true);
+          setAttached(true);
+          setLogs(data.logs || []);
+          setScreenStatus("running");
+          followRun();
+        }
+      } catch { /* backend unreachable — fetchPicks already surfaces that */ }
+    })();
+    return stopPolling;
+  }, []);
 
   const today = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" });
 
@@ -441,9 +441,9 @@ export default function TodayPick() {
         </>
       )}
       <button className={styles.btn} onClick={runScreen} disabled={running}>
-        {running ? "Running..." : "Run Screener"}
+        {running ? (attached ? "Following run..." : "Running...") : "Run Screener"}
       </button>
-      {running && <LogPanel logs={logs} onStop={stopScreen} screenStatus={screenStatus} />}
+      {running && <LogPanel logs={logs} onStop={stopScreen} screenStatus={screenStatus} attached={attached} />}
       {!running && screenStatus === "stopped" && (
         <p className={styles.runNote}>Screening stopped. Run again to get picks.</p>
       )}
@@ -462,7 +462,7 @@ export default function TodayPick() {
         </button>
       </div>
 
-      {running && <LogPanel logs={logs} onStop={stopScreen} screenStatus={screenStatus} />}
+      {running && <LogPanel logs={logs} onStop={stopScreen} screenStatus={screenStatus} attached={attached} />}
 
       <div className={styles.pickList}>
         {picks.map(pick => (
