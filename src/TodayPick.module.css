@@ -241,7 +241,10 @@
 }
 .logLine  { font-family: var(--mono); font-size: 11px; color: var(--muted);  white-space: pre-wrap; }
 .logOk    { font-family: var(--mono); font-size: 11px; color: var(--accent); white-space: pre-wrap; }
-.logSkip  { font-family: var(--mono); font-size: 11px; color: var(--border); white-space: pre-wrap; }
+/* Rejections now carry the reason they were rejected, so they are worth reading —
+   dimmer than a pick, but no longer the near-invisible border colour. */
+.logSkip  { font-family: var(--mono); font-size: 11px; color: var(--muted); opacity: 0.7; white-space: pre-wrap; }
+.logWarn  { font-family: var(--mono); font-size: 11px; color: var(--yellow); white-space: pre-wrap; }
 .logPick  { font-family: var(--mono); font-size: 11px; color: var(--accent); font-weight: 600; white-space: pre-wrap; }
 .logErr   { font-family: var(--mono); font-size: 11px; color: var(--red);    white-space: pre-wrap; }
 

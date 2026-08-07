@@ -302,9 +302,17 @@ function LogPanel({ logs, onStop, screenStatus, attached }) {
         {logs.map((line, i) => {
           const isPick  = line.includes("=== Results") || /\s#[123]\s/.test(line);
           const isOk    = line.includes("✓ READY");
-          const isSkip  = line.includes("skipped");
+          // Rejections now carry the reason rather than the word "skipped", so the
+          // ✕ marker is what identifies them.
+          const isSkip  = line.includes("✕");
+          const isWarn  = line.includes("WARNING") || line.includes("rate limited");
           const isErr   = /error|Error|Abort/i.test(line);
-          const cls = isPick ? styles.logPick : isErr ? styles.logErr : isOk ? styles.logOk : isSkip ? styles.logSkip : styles.logLine;
+          const cls = isPick ? styles.logPick
+                    : isErr  ? styles.logErr
+                    : isWarn ? styles.logWarn
+                    : isOk   ? styles.logOk
+                    : isSkip ? styles.logSkip
+                    : styles.logLine;
           return <div key={i} className={cls}>{line}</div>;
         })}
       </div>
