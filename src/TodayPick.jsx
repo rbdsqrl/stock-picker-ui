@@ -305,7 +305,8 @@ function LogPanel({ logs, onStop, screenStatus, attached }) {
           // Rejections now carry the reason rather than the word "skipped", so the
           // ✕ marker is what identifies them.
           const isSkip  = line.includes("✕");
-          const isWarn  = line.includes("WARNING") || line.includes("rate limited");
+          const isWarn  = line.includes("WARNING") || line.includes("rate limited")
+                       || line.includes("throttled") || line.includes("abandoned");
           const isErr   = /error|Error|Abort/i.test(line);
           const cls = isPick ? styles.logPick
                     : isErr  ? styles.logErr
