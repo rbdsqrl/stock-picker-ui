@@ -1,7 +1,6 @@
 import { useState } from "react";
 import TodayPick from "./TodayPick";
 import History from "./History";
-import Watchlist from "./Watchlist";
 import Analyse from "./Analyse";
 import styles from "./App.module.css";
 
@@ -29,10 +28,6 @@ export default function App() {
             onClick={() => setView("history")}
           >History</button>
           <button
-            className={`${styles.navBtn} ${view === "watchlist" ? styles.activeAmber : ""}`}
-            onClick={() => setView("watchlist")}
-          >Setting Up</button>
-          <button
             className={`${styles.navBtn} ${view === "analyse" ? styles.active : ""}`}
             onClick={() => setView("analyse")}
           >Analyse</button>
@@ -40,10 +35,9 @@ export default function App() {
       </header>
 
       <main className={styles.main}>
-        {view === "today"     && <TodayPick />}
-        {view === "history"   && <History />}
-        {view === "watchlist" && <Watchlist />}
-        {view === "analyse"   && <Analyse />}
+        {view === "today"   && <TodayPick />}
+        {view === "history" && <History />}
+        {view === "analyse" && <Analyse />}
       </main>
 
       <footer className={styles.footer}>

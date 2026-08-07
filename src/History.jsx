@@ -151,15 +151,34 @@ export default function History() {
   const active   = STAT_FILTERS.find(f => f.key === statFilter);
   const shown    = active ? picks.filter(active.match) : picks;
 
+  // Re-running the screener on the same day no longer overwrites the earlier call —
+  // every run is kept — so a date can hold several sets of picks. Group by date, then
+  // by run inside it, and only surface the run header when there is more than one.
   const byDate = [];
-  const seen   = {};
+  const seenDate = {};
   for (const p of shown) {
-    if (!seen[p.date]) { seen[p.date] = []; byDate.push({ date: p.date, rows: seen[p.date] }); }
-    seen[p.date].push(p);
+    const runKey = p.run_at || "";
+    if (!seenDate[p.date]) {
+      seenDate[p.date] = { runs: [], byRun: {} };
+      byDate.push({ date: p.date, ...seenDate[p.date] });
+    }
+    const group = seenDate[p.date];
+    if (!group.byRun[runKey]) {
+      group.byRun[runKey] = { runAt: p.run_at, rows: [] };
+      group.runs.push(group.byRun[runKey]);
+    }
+    group.byRun[runKey].rows.push(p);
   }
 
   const fmtDate = (iso) => new Date(iso + "T00:00:00")
     .toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+  const fmtRun = (iso) => {
+    if (!iso) return "earlier run";
+    const d = new Date(iso);
+    return isNaN(d) ? "earlier run"
+      : d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+  };
 
   return (
     <div className={styles.wrap}>
@@ -237,10 +256,23 @@ export default function History() {
           <div className={styles.noMatch}>No picks are {active.label.toLowerCase()} right now.</div>
         )}
 
-        {byDate.map(({ date, rows }) => (
+        {byDate.map(({ date, runs }) => (
           <div key={date} className={styles.dateGroup}>
-            <div className={styles.dateHeader}>{fmtDate(date)}</div>
-            {rows.map(p => {
+            <div className={styles.dateHeader}>
+              {fmtDate(date)}
+              {runs.length > 1 && (
+                <span className={styles.runCount}>{runs.length} runs</span>
+              )}
+            </div>
+            {runs.map((run, i) => (
+            <div key={run.runAt || i}>
+            {runs.length > 1 && (
+              <div className={styles.runHeader}>
+                Run {runs.length - i} of {runs.length} · {fmtRun(run.runAt)}
+                {i === 0 && <span className={styles.runLatest}>latest</span>}
+              </div>
+            )}
+            {run.rows.map(p => {
               return (
                 <div key={p.id} className={`${styles.tableRow} ${p.rank === 1 ? styles.rowTop : ""}`}>
                   <span className={`${styles.rankBadge} ${p.rank === 1 ? styles.rankBest : styles.rankOther}`}>
@@ -276,6 +308,8 @@ export default function History() {
                 </div>
               );
             })}
+            </div>
+            ))}
           </div>
         ))}
       </div>

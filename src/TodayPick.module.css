@@ -245,52 +245,5 @@
   transition: background 0.15s, color 0.15s;
 }
 .stopBtn:hover { background: var(--red); color: var(--bg); }
-.logSetup { font-family: var(--mono); font-size: 11px; color: var(--yellow); white-space: pre-wrap; }
-
-/* ── Watchlist section ──────────────────────────────────────────────────────── */
-.watchlistSection {
-  display: flex; flex-direction: column; gap: 14px;
-  border-top: 1px solid var(--border);
-  padding-top: 22px;
-}
-.watchlistHeader { display: flex; flex-direction: column; gap: 4px; }
-.watchlistTitle  { font-size: 16px; font-weight: 600; color: var(--yellow); }
-.watchlistSub    { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-.watchlistList   { display: flex; flex-direction: column; gap: 12px; }
-
-/* ── Watchlist card ─────────────────────────────────────────────────────────── */
-.watchCard {
-  background: var(--bg2);
-  border: 1px solid rgba(154, 120, 32, 0.35);
-  border-radius: 8px;
-  padding: 16px 18px;
-  display: flex; flex-direction: column; gap: 14px;
-}
-.watchHead {
-  display: flex; align-items: center; justify-content: space-between;
-}
-.setupBadge {
-  font-family: var(--mono); font-size: 10px; font-weight: 600;
-  letter-spacing: 0.07em; text-transform: uppercase;
-  padding: 3px 9px; border-radius: 3px;
-  background: rgba(154, 120, 32, 0.12); color: var(--yellow);
-  border: 1px solid rgba(154, 120, 32, 0.3);
-}
-.watchTicker {
-  font-family: var(--mono); font-size: 22px; font-weight: 600;
-  color: var(--yellow); letter-spacing: 0.04em;
-}
-
-/* ── Setup meta row ─────────────────────────────────────────────────────────── */
-.setupMeta  { display: flex; flex-direction: column; gap: 6px; }
-.setupRow   { display: flex; flex-direction: column; gap: 2px; }
-.setupLabel {
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--muted);
-}
-.setupText     { font-family: var(--mono); font-size: 12px; color: var(--yellow); font-weight: 500; }
-.watchForText  { font-size: 13px; color: var(--text); line-height: 1.6; }
-
-.watchLevels { display: flex; flex-direction: column; gap: 5px; }
 
 .dotAmber { background: var(--yellow); }

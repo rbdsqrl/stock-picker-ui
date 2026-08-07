@@ -147,114 +147,6 @@ function SetupSignalRow({ name, data }) {
   );
 }
 
-function WatchlistCard({ pick }) {
-  const {
-    ticker, company, sector, price,
-    pct_from_52w_high, setup_summary, watch_for,
-    signals, stop_loss, stop_pct, target, target_pct, rr_ratio,
-    run_at, rank,
-  } = pick;
-
-  const runTime = run_at
-    ? new Date(run_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
-    : "";
-
-  return (
-    <div className={styles.watchCard}>
-      <div className={styles.watchHead}>
-        <span className={styles.setupBadge}>#{rank} Setting Up</span>
-        <span className={styles.runMeta}>{runTime}</span>
-      </div>
-
-      <div className={styles.stockRow}>
-        <div>
-          <div className={styles.tickerLine}>
-            <span className={styles.watchTicker}>{ticker}</span>
-            <span className={styles.sectorTag}>{sector}</span>
-            <a
-              href={`https://www.tradingview.com/chart/?symbol=NSE:${ticker}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.tvLink}
-            >TradingView ↗</a>
-          </div>
-          <div className={styles.company}>{company}</div>
-        </div>
-        <div className={styles.priceCol}>
-          <div className={styles.ltp}>₹{price?.toLocaleString("en-IN")}</div>
-          <div className={styles.ltpLabel} style={{ color: "var(--yellow)" }}>
-            {pct_from_52w_high}% from 52W high
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.setupMeta}>
-        <div className={styles.setupRow}>
-          <span className={styles.setupLabel}>Signals firing</span>
-          <span className={styles.setupText}>{setup_summary}</span>
-        </div>
-        {watch_for && (
-          <div className={styles.setupRow}>
-            <span className={styles.setupLabel}>Watch for</span>
-            <span className={styles.watchForText}>{watch_for}</span>
-          </div>
-        )}
-      </div>
-
-      {(stop_loss || target) && (
-        <div className={styles.watchLevels}>
-          <span className={styles.levelGroupLabel}>Indicative levels — not triggered yet</span>
-          <div className={styles.riskBoxes}>
-            {stop_loss && (
-              <div className={styles.levelBox}>
-                <span className={styles.levelBoxLabel}>Stop Loss</span>
-                <span className={styles.levelBoxVal} style={{ color: "var(--red)" }}>
-                  ₹{stop_loss?.toLocaleString("en-IN")}
-                  {stop_pct && (
-                    <span className={styles.pctPill} style={{ background: "rgba(173,116,116,0.13)", color: "var(--red)" }}>
-                      −{stop_pct}%
-                    </span>
-                  )}
-                </span>
-              </div>
-            )}
-            {target && (
-              <div className={styles.levelBox}>
-                <span className={styles.levelBoxLabel}>Target (indicative)</span>
-                <span className={styles.levelBoxVal} style={{ color: "var(--accent)" }}>
-                  ₹{target?.toLocaleString("en-IN")}
-                  {target_pct && (
-                    <span className={styles.pctPill} style={{ background: "rgba(127,181,154,0.13)", color: "var(--accent)" }}>
-                      +{target_pct}%
-                    </span>
-                  )}
-                </span>
-              </div>
-            )}
-            {rr_ratio && (
-              <div className={styles.levelBox}>
-                <span className={styles.levelBoxLabel}>Risk : Reward</span>
-                <span className={styles.levelBoxVal}>1 : {rr_ratio}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className={styles.analysisSections}>
-        <div className={styles.analysisBlock} style={{ borderTop: "none" }}>
-          <span className={styles.analysisLabel}>Early Signals</span>
-          <div className={styles.signalList}>
-            {Object.entries(signals || {}).map(([name, data]) => (
-              <SetupSignalRow key={name} name={name} data={data} />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function NewsSection({ news }) {
   const hasNews = news && news.length > 0;
   return (
@@ -449,10 +341,9 @@ function LogPanel({ logs, onStop, screenStatus }) {
         {logs.map((line, i) => {
           const isPick  = line.includes("=== Results") || /\s#[123]\s/.test(line);
           const isOk    = line.includes("✓ READY");
-          const isSetup = line.includes("◈ SETUP");
           const isSkip  = line.includes("skipped");
           const isErr   = /error|Error|Abort/i.test(line);
-          const cls = isPick ? styles.logPick : isErr ? styles.logErr : isOk ? styles.logOk : isSetup ? styles.logSetup : isSkip ? styles.logSkip : styles.logLine;
+          const cls = isPick ? styles.logPick : isErr ? styles.logErr : isOk ? styles.logOk : isSkip ? styles.logSkip : styles.logLine;
           return <div key={i} className={cls}>{line}</div>;
         })}
       </div>

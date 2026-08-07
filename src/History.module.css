@@ -184,61 +184,24 @@
   color: var(--accent2); font-size: 11px;
 }
 
-/* ── Setting Up history section ───────────────────────────────────────────── */
-.wlSection { display: flex; flex-direction: column; gap: 12px; }
-.wlSectionHead { display: flex; flex-direction: column; gap: 3px; }
-.wlSectionTitle {
-  font-size: 16px; font-weight: 600; color: var(--yellow);
+/* ── Run grouping ─────────────────────────────────────────────────────────── */
+/* A date can hold several screening runs; these label them without competing
+   with the date header itself. */
+.dateHeader { display: flex; align-items: center; gap: 8px; }
+.runCount {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.06em;
+  color: var(--muted); border: 1px solid var(--border);
+  border-radius: 3px; padding: 1px 5px;
 }
-.wlSectionSub {
-  font-family: var(--mono); font-size: 11px; color: var(--muted);
+.runHeader {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 20px 5px 32px;
+  font-family: var(--mono); font-size: 10px;
+  color: var(--muted); background: var(--bg2);
+  border-bottom: 1px dashed var(--border);
 }
-
-.wlTableWrap {
-  background: var(--bg2);
-  border: 1px solid rgba(154, 120, 32, 0.35);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-/* 6 cols: Rank | Ticker | Signals | Entry | Now | From High */
-.wlTableHead,
-.wlTableRow {
-  display: grid;
-  grid-template-columns: 52px 80px 1fr 80px 130px 84px;
-  padding: 0 20px;
-  align-items: center;
-}
-
-.wlTableHead {
-  height: 36px;
-  background: rgba(154, 120, 32, 0.07);
-  border-bottom: 1px solid rgba(154, 120, 32, 0.2);
-  font-family: var(--mono); font-size: 10px; color: var(--muted);
-  letter-spacing: 0.07em; text-transform: uppercase;
-}
-
-.wlTableRow {
-  height: 50px;
-  border-bottom: 1px solid var(--border);
-  transition: background 0.1s;
-}
-.wlTableRow:last-child { border-bottom: none; }
-.wlTableRow:hover { background: var(--bg3); }
-
-.wlRankBadge {
-  font-family: var(--mono); font-size: 10px; font-weight: 600;
-  color: var(--yellow); letter-spacing: 0.04em;
-}
-.wlCellTicker {
-  font-family: var(--mono); font-size: 13px; font-weight: 600;
-  color: var(--yellow);
-}
-.wlSignals {
-  font-family: var(--mono); font-size: 11px; color: var(--muted);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.wlFromHigh {
-  font-family: var(--mono); font-size: 11px; color: var(--muted);
-  text-align: right;
+.runLatest {
+  font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--accent); border: 1px solid rgba(74,222,128,0.3);
+  border-radius: 3px; padding: 1px 5px;
 }
