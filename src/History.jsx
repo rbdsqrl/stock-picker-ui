@@ -318,7 +318,9 @@ export default function History() {
         "Now" and target outcomes refresh on every page load. Hit? shows ✓ T2 when the daily high crossed the long target
         before a close fell below the SL, ✓ T1 when the short target was banked before the pick closed out on the SL (·SL)
         or the 45-day expiry (·exp), and ◐ T1 while T1 is in hand with T2 still open. Scoring starts the session after the
-        pick date, and an intraday wick through the SL that recovers by the close is not a stop-out.
+        pick date, and an intraday wick through the SL that recovers by the close is not a stop-out. A fresh pick also
+        gets a 10-day grace window: for the first 10 days only a close below twice the stop distance (entry − 2R) counts
+        as a stop-out, and the stored SL applies from day 11 onward.
       </p>
     </div>
   );
