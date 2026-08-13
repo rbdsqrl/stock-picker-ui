@@ -175,6 +175,26 @@
 /* T1 banked before the pick closed out on the SL or the 45-day expiry — a partial win */
 .hitT1Won   { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--accent); opacity: 0.88; white-space: nowrap; }
 
+/* ── Pager ────────────────────────────────────────────────────────────────── */
+/* Sits between the table and the footnote; borrows the refresh button's styling so
+   the two read as the same class of control. */
+.pager {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  padding: 4px 0;
+}
+.pagerBtn {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+  border-radius: 4px; padding: 4px 12px;
+  font-family: var(--mono); font-size: 11px;
+  cursor: pointer; transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.pagerBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+.pagerBtn:hover:not(:disabled) { color: var(--text); border-color: var(--muted); }
+.pagerInfo {
+  font-family: var(--mono); font-size: 10px; color: var(--muted); white-space: nowrap;
+}
+
 /* ── Footer ───────────────────────────────────────────────────────────────── */
 .note {
   font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 1.7;

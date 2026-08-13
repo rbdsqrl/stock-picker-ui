@@ -1,8 +1,51 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import styles from "./History.module.css";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8001";
 const RANK_LABEL = { 1: "#1", 2: "#2", 3: "#3" };
+
+// Dates per page. Prices are only fetched for the page on screen, so this also caps
+// how much of the rate-limit budget one visit to the History page can spend.
+const DATES_PER_PAGE = 5;
+// Symbols per /api/prices call. The backend spends one Yahoo chart request per symbol,
+// so the page asks in small groups, one call after the next, rather than in one burst.
+const PRICE_CHUNK = 5;
+
+// Each stat chip doubles as a filter over the table below, so the counts stay the
+// way you drill into them. Predicates live here so the number on the chip and the
+// rows it reveals can never drift apart.
+const STAT_FILTERS = [
+  { key: "hits",    label: "Hits",       color: "var(--accent)", border: "rgba(74,222,128,0.3)",
+    match: p => p.target_hit === 1 },
+  { key: "misses",  label: "Misses",     color: "var(--red)",    border: "rgba(248,113,113,0.3)",
+    match: p => p.target_hit === 0 },
+  { key: "waiting", label: "Waiting",    color: "var(--yellow)", border: null,
+    match: p => p.target_hit == null },
+  // Open picks that already tagged the short target — the move is underway.
+  { key: "t1",      label: "T1 in play", color: "var(--accent)", border: "rgba(74,222,128,0.3)",
+    opacity: 0.72, match: p => p.target_hit == null && p.target_short_hit === 1 },
+];
+
+// Group by date, then by run inside it: re-running the screener on the same day no
+// longer overwrites the earlier call, so a date can hold several sets of picks.
+function groupByDate(rows) {
+  const out = [];
+  const seen = {};
+  for (const p of rows) {
+    const runKey = p.run_at || "";
+    if (!seen[p.date]) {
+      seen[p.date] = { runs: [], byRun: {} };
+      out.push({ date: p.date, ...seen[p.date] });
+    }
+    const group = seen[p.date];
+    if (!group.byRun[runKey]) {
+      group.byRun[runKey] = { runAt: p.run_at, rows: [] };
+      group.runs.push(group.byRun[runKey]);
+    }
+    group.byRun[runKey].rows.push(p);
+  }
+  return out;
+}
 
 function fmt(v) {
   if (v == null) return "—";
@@ -79,25 +122,16 @@ export default function History() {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshResult, setRefreshResult] = useState(null);
   const [statFilter, setStatFilter] = useState(null);
-
-  const loadPrices = async (rows) => {
-    const tickers = [...new Set(rows.map(p => p.ticker))];
-    if (!tickers.length) return;
-    try {
-      const res  = await fetch(`${API}/api/prices?tickers=${tickers.join(",")}`);
-      setPrices(await res.json());
-    } catch { /* network */ }
-  };
+  const [page, setPage]             = useState(0);
+  const [pricesLoading, setPricesLoading] = useState(false);
 
   const load = () => {
     setLoading(true);
     fetch(`${API}/api/pick/history`)
       .then(r => r.json())
       .then(d => {
-        const rows = d.picks || [];
-        setPicks(rows);
+        setPicks(d.picks || []);
         setLoading(false);
-        loadPrices(rows);
       })
       .catch(() => setLoading(false));
   };
@@ -118,6 +152,56 @@ export default function History() {
 
   useEffect(() => { load(); }, []);
 
+  const active    = STAT_FILTERS.find(f => f.key === statFilter);
+  const shown     = useMemo(
+    () => (active ? picks.filter(active.match) : picks),
+    [picks, statFilter]);
+  const allDates  = useMemo(() => groupByDate(shown), [shown]);
+  const pageCount = Math.max(1, Math.ceil(allDates.length / DATES_PER_PAGE));
+  // A filter can shrink the list under the current page — clamp rather than showing
+  // an empty page the user never navigated to.
+  const safePage  = Math.min(page, pageCount - 1);
+  const byDate    = allDates.slice(safePage * DATES_PER_PAGE, (safePage + 1) * DATES_PER_PAGE);
+
+  useEffect(() => { setPage(0); }, [statFilter]);
+
+  // Only the visible page's tickers are worth a price, and they are fetched in small
+  // groups one after the other: the backend spends a Yahoo request per symbol, and
+  // asking for all 90-odd at once is what got the whole list throttled down to a
+  // couple of prices. Each group lands in state as it arrives, so the column fills in
+  // progressively instead of waiting on the slowest call.
+  const pageTickers = useMemo(
+    () => [...new Set(byDate.flatMap(g => g.runs.flatMap(r => r.rows.map(p => p.ticker))))],
+    [byDate]);
+  const tickerKey = pageTickers.join(",");
+
+  useEffect(() => {
+    if (!pageTickers.length) return;
+    let cancelled = false;
+
+    (async () => {
+      // Anything already in hand stays put — paging back to a seen date costs nothing.
+      const missing = pageTickers.filter(t => prices[t] == null);
+      if (!missing.length) { setPricesLoading(false); return; }
+      setPricesLoading(true);
+      for (let i = 0; i < missing.length; i += PRICE_CHUNK) {
+        if (cancelled) return;
+        const chunk = missing.slice(i, i + PRICE_CHUNK);
+        try {
+          // encodeURIComponent is load-bearing: M&MFIN's ampersand would otherwise end
+          // the tickers parameter and every symbol after it would be silently dropped.
+          const res  = await fetch(`${API}/api/prices?tickers=${encodeURIComponent(chunk.join(","))}`);
+          const data = await res.json();
+          if (cancelled) return;
+          setPrices(prev => ({ ...prev, ...data }));
+        } catch { /* network — leave those cells as — */ }
+      }
+      setPricesLoading(false);
+    })();
+
+    return () => { cancelled = true; };
+  }, [tickerKey]);
+
   if (loading) return <div className={styles.center}><div className={styles.spinner} /></div>;
 
   if (!picks.length) return (
@@ -132,43 +216,6 @@ export default function History() {
   const hitRate = top.length > 0
     ? Math.round((top.filter(p => p.target_hit === 1).length / top.length) * 100)
     : null;
-
-  // Each stat chip doubles as a filter over the table below, so the counts stay the
-  // way you drill into them. Predicates live here so the number on the chip and the
-  // rows it reveals can never drift apart.
-  const STAT_FILTERS = [
-    { key: "hits",    label: "Hits",       color: "var(--accent)", border: "rgba(74,222,128,0.3)",
-      match: p => p.target_hit === 1 },
-    { key: "misses",  label: "Misses",     color: "var(--red)",    border: "rgba(248,113,113,0.3)",
-      match: p => p.target_hit === 0 },
-    { key: "waiting", label: "Waiting",    color: "var(--yellow)", border: null,
-      match: p => p.target_hit == null },
-    // Open picks that already tagged the short target — the move is underway.
-    { key: "t1",      label: "T1 in play", color: "var(--accent)", border: "rgba(74,222,128,0.3)",
-      opacity: 0.72, match: p => p.target_hit == null && p.target_short_hit === 1 },
-  ];
-
-  const active   = STAT_FILTERS.find(f => f.key === statFilter);
-  const shown    = active ? picks.filter(active.match) : picks;
-
-  // Re-running the screener on the same day no longer overwrites the earlier call —
-  // every run is kept — so a date can hold several sets of picks. Group by date, then
-  // by run inside it, and only surface the run header when there is more than one.
-  const byDate = [];
-  const seenDate = {};
-  for (const p of shown) {
-    const runKey = p.run_at || "";
-    if (!seenDate[p.date]) {
-      seenDate[p.date] = { runs: [], byRun: {} };
-      byDate.push({ date: p.date, ...seenDate[p.date] });
-    }
-    const group = seenDate[p.date];
-    if (!group.byRun[runKey]) {
-      group.byRun[runKey] = { runAt: p.run_at, rows: [] };
-      group.runs.push(group.byRun[runKey]);
-    }
-    group.byRun[runKey].rows.push(p);
-  }
 
   const fmtDate = (iso) => new Date(iso + "T00:00:00")
     .toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -249,7 +296,7 @@ export default function History() {
           <span>T2 long</span>
           <span>SL</span>
           <span>Hit?</span>
-          <span>Now ●</span>
+          <span>{pricesLoading ? "Now …" : "Now ●"}</span>
         </div>
 
         {active && !byDate.length && (
@@ -314,8 +361,28 @@ export default function History() {
         ))}
       </div>
 
+      {allDates.length > 0 && (
+        <div className={styles.pager}>
+          <button
+            type="button"
+            className={styles.pagerBtn}
+            onClick={() => setPage(p => Math.max(0, p - 1))}
+            disabled={safePage === 0}
+          >← Newer</button>
+          <span className={styles.pagerInfo}>
+            Page {safePage + 1} of {pageCount} · {byDate.length} of {allDates.length} dates
+          </span>
+          <button
+            type="button"
+            className={styles.pagerBtn}
+            onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))}
+            disabled={safePage >= pageCount - 1}
+          >Older →</button>
+        </div>
+      )}
+
       <p className={styles.note}>
-        "Now" and target outcomes refresh on every page load. Hit? shows ✓ T2 when the daily high crossed the long target
+        "Now" prices are fetched for the dates on screen, a few symbols at a time, so the column fills in as they land. Hit? shows ✓ T2 when the daily high crossed the long target
         before a close fell below the SL, ✓ T1 when the short target was banked before the pick closed out on the SL (·SL)
         or the 45-day expiry (·exp), and ◐ T1 while T1 is in hand with T2 still open. Scoring starts the session after the
         pick date, and an intraday wick through the SL that recovers by the close is not a stop-out. A fresh pick also
