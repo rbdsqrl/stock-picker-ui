@@ -81,11 +81,14 @@
   overflow: hidden;
 }
 
-/* 8 cols: Rank | Ticker | Entry | T1 | T2 | SL | Hit? | Now */
+/* 8 cols: Rank | Ticker | Entry | T1 | T2 | SL | Hit? | Now
+   The ticker column carries a caret and, on a call that just turned, a "new" tag,
+   so the level columns are trimmed to the width their numbers actually need and
+   the slack goes to the ticker rather than clipping it. */
 .tableHead,
 .tableRow {
   display: grid;
-  grid-template-columns: 40px 1fr 82px 104px 104px 100px 84px 116px;
+  grid-template-columns: 34px minmax(150px, 1fr) 80px 98px 98px 96px 84px 112px;
   padding: 0 20px;
   align-items: center;
 }
@@ -132,7 +135,10 @@
 
 /* ── Cells ────────────────────────────────────────────────────────────────── */
 .cellMono   { font-family: var(--mono); font-size: 12px; color: var(--text); white-space: nowrap; }
-.cellTicker { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent2); }
+.cellTicker {
+  font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent2);
+  display: flex; align-items: center; min-width: 0; white-space: nowrap;
+}
 .tvLink {
   font-size: 10px; color: var(--muted); text-decoration: none;
   border: 1px solid var(--border); border-radius: 3px;
@@ -224,4 +230,172 @@
   font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--accent); border: 1px solid rgba(74,222,128,0.3);
   border-radius: 3px; padding: 1px 5px;
+}
+
+/* ── Change trail ─────────────────────────────────────────────────────────── */
+/* "Changed" is deliberately drawn in the slate blue, not the sage or the red:
+   unseen and went-well are different questions, and a stopped-out pick that is
+   also new has to read as both at once. */
+
+.statChipNew  { position: relative; }
+.statChipDot {
+  position: absolute; top: -4px; right: -4px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent2); border: 2px solid var(--bg);
+}
+
+/* Strip ------------------------------------------------------------------- */
+.strip {
+  border: 1px solid rgba(61, 120, 160, 0.45);
+  border-radius: 8px; background: var(--bg2); overflow: hidden;
+}
+.stripHead {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 16px;
+  background: rgba(61, 120, 160, 0.08);
+  border-bottom: 1px solid var(--border);
+}
+.stripTitle   { font-size: 13px; font-weight: 600; color: var(--text); }
+.stripSince   { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.stripActions { margin-left: auto; display: flex; gap: 6px; }
+
+.stripLink, .stripLinkPlain, .stripView {
+  font-family: var(--mono); font-size: 11px;
+  background: none; border: 1px solid transparent; border-radius: 4px;
+  padding: 2px 8px; cursor: pointer; white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.stripLink  { color: var(--accent2); text-decoration: underline; text-underline-offset: 2px; }
+.stripLinkPlain, .stripView { color: var(--muted); border-color: var(--border); }
+.stripLink:hover { color: var(--text); }
+.stripLinkPlain:hover, .stripView:hover { color: var(--text); border-color: var(--muted); }
+.stripLink:focus-visible, .stripLinkPlain:focus-visible, .stripView:focus-visible {
+  outline: 2px solid var(--accent2); outline-offset: 2px;
+}
+
+.stripRow {
+  display: grid;
+  grid-template-columns: 104px minmax(160px, 1fr) 128px 132px 62px;
+  gap: 12px; align-items: center;
+  padding: 9px 16px; border-top: 1px solid var(--border);
+  font-family: var(--mono); font-size: 12px;
+}
+.stripRow:first-of-type { border-top: none; }
+.stripTicker { font-weight: 600; color: var(--accent2); }
+.transition  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stripArrow  { color: var(--muted); }
+.stripWhen   { color: var(--muted); }
+.stripPx     { font-variant-numeric: tabular-nums; color: var(--muted); }
+.stripMuted  { color: var(--muted); }
+.stripView   { justify-self: end; }
+
+/* Narrow screens: the strip stacks rather than forcing the page sideways. */
+@media (max-width: 720px) {
+  .stripRow { grid-template-columns: 1fr auto; row-gap: 6px; }
+  .transition { grid-column: 1 / -1; }
+  .stripWhen, .stripPx { font-size: 11px; }
+}
+
+/* State pills — the same vocabulary as the Hit? column, at chip size. */
+.statePill {
+  display: inline-flex; align-items: center;
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  border: 1px solid transparent; border-radius: 3px;
+  padding: 1px 7px; white-space: nowrap;
+}
+.stPending { color: var(--muted); border-color: var(--border); font-weight: 400; }
+.stT1      { color: var(--accent); border-color: rgba(74,222,128,0.3); opacity: 0.78; }
+.stT1Won   { color: var(--accent); border-color: rgba(74,222,128,0.35); opacity: 0.9;
+             background: rgba(77,148,116,0.07); }
+.stHit     { color: var(--accent); border-color: rgba(74,222,128,0.4);
+             background: rgba(77,148,116,0.1); }
+.stFail    { color: var(--red); border-color: rgba(248,113,113,0.4);
+             background: rgba(176,68,68,0.08); }
+
+.bannerDismiss {
+  float: right; margin-left: 12px;
+  font-family: var(--mono); font-size: 11px; color: inherit;
+  background: none; border: none; padding: 0; cursor: pointer; opacity: 0.7;
+}
+.bannerDismiss:hover { opacity: 1; }
+
+/* Changed rows ------------------------------------------------------------ */
+.tableRow[role="button"] { cursor: pointer; }
+.tableRow:focus-visible  { outline: 2px solid var(--accent2); outline-offset: -2px; }
+
+.rowNew  { box-shadow: inset 3px 0 0 0 var(--accent2); background: rgba(61, 120, 160, 0.06); }
+.rowNew:hover { background: rgba(61, 120, 160, 0.11); }
+.rowOpen { background: var(--bg3); }
+
+.caret {
+  display: inline-block; width: 11px; margin-right: 3px;
+  color: var(--muted); font-size: 9px;
+}
+.newTag {
+  margin-left: 6px;
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--accent2);
+  border: 1px solid rgba(61, 120, 160, 0.45); border-radius: 3px;
+  padding: 1px 4px;
+}
+
+/* Call trail -------------------------------------------------------------- */
+.trail {
+  padding: 16px 20px 18px 24px;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+.trailHead {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
+}
+.trailNote, .trailError {
+  font-family: var(--mono); font-size: 11px; line-height: 1.6;
+  color: var(--muted); padding-top: 10px;
+}
+.trailError { color: var(--red); }
+
+.tl { display: flex; flex-direction: column; }
+.tlItem {
+  display: grid; grid-template-columns: 14px 104px minmax(0, 1fr) 100px;
+  gap: 12px; align-items: start; position: relative; padding-bottom: 14px;
+}
+.tlItem:last-child { padding-bottom: 0; }
+/* The connector stops at the last pip rather than trailing into empty space. */
+.tlItem::before {
+  content: ""; position: absolute; left: 6px; top: 14px; bottom: 0;
+  width: 1px; background: var(--border);
+}
+.tlItem:last-child::before { display: none; }
+
+.tlPip {
+  width: 9px; height: 9px; border-radius: 50%; margin: 5px 0 0 2px;
+  background: var(--bg); border: 2px solid var(--muted);
+  position: relative; z-index: 1; flex: none;
+}
+.pipGood { border-color: var(--accent);  background: var(--accent); }
+.pipBad  { border-color: var(--red);     background: var(--red); }
+.pipOpen { border-color: var(--accent2); background: var(--bg2); }
+
+.tlDate { font-family: var(--mono); font-size: 11px; color: var(--muted); padding-top: 2px; }
+.tlBody { font-size: 12.5px; line-height: 1.5; color: var(--text); }
+.tlWhat { font-weight: 500; }
+.tlWhy  { display: block; color: var(--muted); font-size: 11.5px; }
+.tlPx {
+  font-family: var(--mono); font-size: 11.5px; text-align: right;
+  font-variant-numeric: tabular-nums; color: var(--text); padding-top: 2px;
+}
+
+@media (max-width: 720px) {
+  .tlItem { grid-template-columns: 14px minmax(0, 1fr); row-gap: 2px; }
+  .tlDate { grid-column: 2; }
+  .tlBody { grid-column: 2; }
+  .tlPx   { grid-column: 2; text-align: left; }
+}
+
+/* Overflow line when more turned than the strip lists. */
+.stripMore {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 16px; border-top: 1px solid var(--border);
+  background: var(--bg3);
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
 }
