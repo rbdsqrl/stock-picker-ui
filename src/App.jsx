@@ -2,6 +2,7 @@ import { useState } from "react";
 import TodayPick from "./TodayPick";
 import History from "./History";
 import Analyse from "./Analyse";
+import Archive from "./Archive";
 import styles from "./App.module.css";
 
 export default function App() {
@@ -31,6 +32,10 @@ export default function App() {
             className={`${styles.navBtn} ${view === "analyse" ? styles.active : ""}`}
             onClick={() => setView("analyse")}
           >Analyse</button>
+          <button
+            className={`${styles.navBtn} ${view === "archive" ? styles.active : ""}`}
+            onClick={() => setView("archive")}
+          >Archive</button>
         </nav>
       </header>
 
@@ -38,6 +43,7 @@ export default function App() {
         {view === "today"   && <TodayPick />}
         {view === "history" && <History />}
         {view === "analyse" && <Analyse />}
+        {view === "archive" && <Archive />}
       </main>
 
       <footer className={styles.footer}>
