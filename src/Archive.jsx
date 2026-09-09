@@ -52,9 +52,26 @@ function LevelCell({ price, pct, color }) {
   );
 }
 
+// A closure line for calls that were still open when frozen — the price and
+// return at the moment of the snapshot, not a live quote. `outcomePrice` is
+// captured once, at freeze time, and never refreshed afterward.
+function ClosureNote({ outcomePrice, outcomePct }) {
+  if (outcomePrice == null) return null;
+  const up = outcomePct >= 0;
+  return (
+    <span className={styles.stripPx}>
+      {" "}at freeze: <span className={up ? styles.chgUp : styles.chgDown}>
+        {up ? "+" : ""}{outcomePct}%
+      </span>
+    </span>
+  );
+}
+
 // Frozen data only — no live price, so there is no "↑ live" branch here, unlike
-// History's HitCell. A pick that was still open when frozen just reads "—".
-function HitCell({ hit, slHit, days, date, slDate, slDays, t1Hit, t1Date, t1Days }) {
+// History's HitCell. A pick that was still open when frozen shows the price and
+// return captured at the moment of the snapshot instead.
+function HitCell({ hit, slHit, days, date, slDate, slDays, t1Hit, t1Date, t1Days,
+                   outcomePrice, outcomePct }) {
   if (hit === 1) return (
     <span className={styles.hitYes} title={date ? `T2 hit on ${date}` : undefined}>
       ✓ T2 {days != null ? `${days}d` : ""}
@@ -80,9 +97,15 @@ function HitCell({ hit, slHit, days, date, slDate, slDays, t1Hit, t1Date, t1Days
   if (t1Hit === 1) return (
     <span className={styles.hitT1} title={t1Date ? `T1 reached on ${t1Date} — frozen before T2 resolved` : undefined}>
       ◐ T1 {t1Days != null ? `${t1Days}d` : ""}
+      <ClosureNote outcomePrice={outcomePrice} outcomePct={outcomePct} />
     </span>
   );
-  return <span className={styles.hitPending} title="Still open when frozen — this call will not be re-scored">— frozen open</span>;
+  return (
+    <span className={styles.hitPending} title="Still open, neither target nor stop reached — price and return as captured at the moment this call was frozen">
+      — still open
+      <ClosureNote outcomePrice={outcomePrice} outcomePct={outcomePct} />
+    </span>
+  );
 }
 
 export default function Archive() {
@@ -138,8 +161,9 @@ export default function Archive() {
 
       <p className={styles.note}>
         Calls given before this archive was created, frozen exactly as they stood that day —
-        outcomes here will not change on future refreshes. Still-open calls at the time of
-        freezing show as "frozen open" rather than being tracked further.
+        outcomes here will not change on future refreshes. A call still open at the moment of
+        freezing shows "still open" with the price and return captured right then, rather than
+        being tracked any further.
       </p>
 
       <div className={styles.tableWrap}>
@@ -195,6 +219,8 @@ export default function Archive() {
                       t1Hit={p.target_short_hit}
                       t1Date={p.target_short_hit_date}
                       t1Days={p.target_short_hit_days}
+                      outcomePrice={p.outcome_price}
+                      outcomePct={p.outcome_pct}
                     />
                   </div>
                 ))}
