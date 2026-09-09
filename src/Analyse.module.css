@@ -80,7 +80,8 @@
 .tvLink:hover { color: var(--accent2); border-color: var(--accent2); }
 .overviewRight   { text-align: right; }
 .overviewPrice   { font-family: var(--mono); font-size: 26px; font-weight: 600; color: var(--text); }
-.scoreBadge      { margin-top: 8px; }
+.scoreBadgeRow   { display: flex; gap: 18px; justify-content: flex-end; margin-top: 8px; }
+.scoreBadge      { margin-top: 0; }
 .scoreNum        { font-family: var(--mono); font-size: 22px; font-weight: 700; display: block; line-height: 1; }
 .scoreLabel      { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; margin-top: 2px; display: block; }
 

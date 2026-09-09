@@ -27,6 +27,18 @@ function ScoreBadge({ score }) {
   );
 }
 
+function FundamentalScoreBadge({ score, nFactors }) {
+  if (score == null) return null;
+  const label = score >= 65 ? "STRONG" : score >= 40 ? "AVERAGE" : "WEAK";
+  const color = score >= 65 ? "var(--accent)" : score >= 40 ? "var(--yellow)" : "var(--red)";
+  return (
+    <div className={styles.scoreBadge} title={nFactors != null ? `Based on ${nFactors} of 9 factors` : undefined}>
+      <span className={styles.scoreNum} style={{ color }}>{score}</span>
+      <span className={styles.scoreLabel} style={{ color }}>{label}</span>
+    </div>
+  );
+}
+
 function SignalCard({ name, score, detail, interp }) {
   const color = score === 1 ? "var(--accent)" : score === -1 ? "var(--red)" : "var(--muted)";
   const icon  = score === 1 ? "▲" : score === -1 ? "▼" : "—";
@@ -163,7 +175,10 @@ export default function Analyse() {
             </div>
             <div className={styles.overviewRight}>
               <div className={styles.overviewPrice}>{fmt(result.price)}</div>
-              <ScoreBadge score={result.score} />
+              <div className={styles.scoreBadgeRow}>
+                <ScoreBadge score={result.score} />
+                <FundamentalScoreBadge score={f.fundamental_score} nFactors={f.fundamental_score_factors} />
+              </div>
             </div>
           </div>
 

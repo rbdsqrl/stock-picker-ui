@@ -32,6 +32,23 @@ function ScoreBar({ score, basis }) {
   );
 }
 
+function FundamentalScoreBar({ score, nFactors }) {
+  if (score == null) return null;
+  const color = score >= 65 ? "var(--accent)" : score >= 40 ? "var(--yellow)" : "var(--red)";
+  return (
+    <div
+      className={styles.scoreRow}
+      title={nFactors != null ? `Based on ${nFactors} of 9 factors` : undefined}
+    >
+      <span className={styles.scoreLabel}>Fundamental Score</span>
+      <div className={styles.scoreTrack}>
+        <div className={styles.scoreFill} style={{ width: `${score}%`, background: color }} />
+      </div>
+      <span className={styles.scoreNum} style={{ color }}>{score}</span>
+    </div>
+  );
+}
+
 function SignalRow({ name, data }) {
   const label = SIGNAL_META[name] || name;
   const s     = data?.score ?? 0;
@@ -180,6 +197,7 @@ function PickCard({ pick, isTop }) {
       </div>
 
       <ScoreBar score={score} basis={pick.score_basis} />
+      <FundamentalScoreBar score={fundamentals?.fundamental_score} nFactors={fundamentals?.fundamental_score_factors} />
 
       {/* Trade levels */}
       <div className={styles.levelsSection}>
@@ -323,6 +341,7 @@ function LogPanel({ logs, onStop, screenStatus, attached }) {
 
 export default function TodayPick() {
   const [state, setState]               = useState("idle");
+  const [errorMsg, setErrorMsg]         = useState("");
   const [picks, setPicks]               = useState([]);
   const [running, setRunning]           = useState(false);
   const [logs, setLogs]                 = useState([]);
@@ -334,7 +353,12 @@ export default function TodayPick() {
   const fetchPicks = async () => {
     setState("loading");
     try {
-      const res  = await fetch(`${API}/api/pick/today`);
+      const res = await fetch(`${API}/api/pick/today`);
+      if (!res.ok) {
+        setErrorMsg(`Backend responded with an error (HTTP ${res.status}). Try again shortly.`);
+        setState("error");
+        return;
+      }
       const data = await res.json();
       if (data.status === "ok" && data.picks?.length) {
         setPicks(data.picks);
@@ -342,7 +366,15 @@ export default function TodayPick() {
       } else {
         setState("empty");
       }
-    } catch {
+    } catch (err) {
+      // A TypeError here means fetch itself never got a response — DNS failure, the
+      // backend refusing the connection, or CORS blocking it. Anything else means a
+      // response came back but wasn't the JSON we expected.
+      setErrorMsg(
+        err instanceof TypeError
+          ? "Cannot reach the backend server. It may be down, waking up from sleep, or blocked by a network/CORS issue."
+          : "Backend returned an unexpected response. Try again shortly."
+      );
       setState("error");
     }
   };
@@ -435,7 +467,7 @@ export default function TodayPick() {
 
   if (state === "error") return (
     <div className={styles.center}>
-      <p className={styles.errorMsg}>Cannot reach backend. Is the server running on port 8001?</p>
+      <p className={styles.errorMsg}>{errorMsg}</p>
       <button className={styles.btn} onClick={fetchPicks}>Retry</button>
     </div>
   );
