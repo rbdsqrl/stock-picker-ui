@@ -40,12 +40,16 @@ function writeSeen(iso) {
 // way you drill into them. Predicates live here so the number on the chip and the
 // rows it reveals can never drift apart.
 const STAT_FILTERS = [
+  { key: "total",   label: "Total calls", color: "var(--text)",   border: null,
+    match: () => true },
   { key: "hits",    label: "Hits",       color: "var(--accent)", border: "rgba(74,222,128,0.3)",
     match: p => p.target_hit === 1 },
   { key: "misses",  label: "Misses",     color: "var(--red)",    border: "rgba(248,113,113,0.3)",
     match: p => p.target_hit === 0 },
+  // Waiting means neither target has been touched yet — a call that already
+  // tagged T1 is shown in its own chip instead, so the two never overlap.
   { key: "waiting", label: "Waiting",    color: "var(--yellow)", border: null,
-    match: p => p.target_hit == null },
+    match: p => p.target_hit == null && p.target_short_hit !== 1 },
   // Open picks that already tagged the short target — the move is underway.
   { key: "t1",      label: "T1 in play", color: "var(--accent)", border: "rgba(74,222,128,0.3)",
     opacity: 0.72, match: p => p.target_hit == null && p.target_short_hit === 1 },
