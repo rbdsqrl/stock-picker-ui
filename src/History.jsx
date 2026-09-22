@@ -163,12 +163,18 @@ function StatePill({ state, days }) {
   );
 }
 
-function NowCell({ entry, now }) {
-  if (now == null) return <span className={styles.cellMono}>—</span>;
+function NowCell({ entry, now, label }) {
+  if (now == null) return (
+    <span className={styles.nowLive}>
+      {label && <span className={styles.cellLabel}>{label}</span>}
+      <span className={styles.cellMono}>—</span>
+    </span>
+  );
   const pct = ((now - entry) / entry * 100).toFixed(1);
   const up  = now >= entry;
   return (
     <span className={styles.nowLive}>
+      {label && <span className={styles.cellLabel}>{label}</span>}
       <span className={styles.nowBadge}>
         <span className={styles.liveDot} />
         <span className={styles.cellMono}>{fmt(now)}</span>
@@ -178,9 +184,10 @@ function NowCell({ entry, now }) {
   );
 }
 
-function LevelCell({ price, pct, color }) {
+function LevelCell({ price, pct, color, label }) {
   return (
     <span className={styles.levelCell}>
+      {label && <span className={styles.cellLabel}>{label}</span>}
       <span className={styles.cellMono} style={{ color }}>{fmt(price)}</span>
       {pct != null && <span className={styles.pctNote}>{pct > 0 ? `+${pct}` : pct}%</span>}
     </span>
@@ -190,7 +197,7 @@ function LevelCell({ price, pct, color }) {
 function HitCell({ hit, slHit, days, date, slDate, slDays, currentPrice, target,
                    t1Hit, t1Date, t1Days }) {
   if (hit === 1) return (
-    <span className={styles.hitYes} title={date ? `T2 hit on ${date}` : undefined}>
+    <span className={`${styles.hitYes} ${styles.hitCellWrap}`} title={date ? `T2 hit on ${date}` : undefined}>
       ✓ T2 {days != null ? `${days}d` : ""}
     </span>
   );
@@ -198,32 +205,32 @@ function HitCell({ hit, slHit, days, date, slDate, slDays, currentPrice, target,
   // register the T1 touch necessarily came first. A pick that reached T1 banked that
   // gain before it was stopped — that is a T1 hit, not a plain stop-out.
   if (slHit === 1 && t1Hit === 1) return (
-    <span className={styles.hitT1Won}
+    <span className={`${styles.hitT1Won} ${styles.hitCellWrap}`}
           title={`T1 hit on ${t1Date} — before the SL closed below on ${slDate}`}>
       ✓ T1 {t1Days != null ? `${t1Days}d` : ""} · SL
     </span>
   );
   if (hit === 0 && slHit === 1) return (
-    <span className={styles.hitNo} title={slDate ? `SL closed below on ${slDate}` : "Stopped out"}>
+    <span className={`${styles.hitNo} ${styles.hitCellWrap}`} title={slDate ? `SL closed below on ${slDate}` : "Stopped out"}>
       ✗ SL {slDays != null ? `${slDays}d` : ""}
     </span>
   );
   // Expired at 45 days. T1 may still have been reached along the way.
   if (hit === 0 && t1Hit === 1) return (
-    <span className={styles.hitT1Won} title={`T1 hit on ${t1Date} — T2 never reached, expired at 45d`}>
+    <span className={`${styles.hitT1Won} ${styles.hitCellWrap}`} title={`T1 hit on ${t1Date} — T2 never reached, expired at 45d`}>
       ✓ T1 {t1Days != null ? `${t1Days}d` : ""} · exp
     </span>
   );
-  if (hit === 0) return <span className={styles.hitNo}>✗ missed</span>;
+  if (hit === 0) return <span className={`${styles.hitNo} ${styles.hitCellWrap}`}>✗ missed</span>;
   // Still open, but the short target is already in hand — the move is underway.
   if (t1Hit === 1) return (
-    <span className={styles.hitT1} title={t1Date ? `T1 reached on ${t1Date} — T2 still open` : undefined}>
+    <span className={`${styles.hitT1} ${styles.hitCellWrap}`} title={t1Date ? `T1 reached on ${t1Date} — T2 still open` : undefined}>
       ◐ T1 {t1Days != null ? `${t1Days}d` : ""}
     </span>
   );
   if (currentPrice != null && target != null && currentPrice >= target)
-    return <span className={styles.hitLive} title="Live price at or above target — will confirm on next refresh">↑ live</span>;
-  return <span className={styles.hitPending}>—</span>;
+    return <span className={`${styles.hitLive} ${styles.hitCellWrap}`} title="Live price at or above target — will confirm on next refresh">↑ live</span>;
+  return <span className={`${styles.hitPending} ${styles.hitCellWrap}`}>—</span>;
 }
 
 // ── Change strip ────────────────────────────────────────────────────────────
@@ -773,10 +780,13 @@ export default function History() {
                     >↗</a>
                     {isNew && <span className={styles.newTag}>new</span>}
                   </span>
-                  <span className={styles.cellMono}>{fmt(p.price_at_pick)}</span>
-                  <LevelCell price={p.target_short} pct={p.target_short_pct ?? null}      color="var(--accent)" />
-                  <LevelCell price={p.target}    pct={p.target_pct ?? null}                color="var(--accent)" />
-                  <LevelCell price={p.stop_loss} pct={p.stop_pct  ? -p.stop_pct : null}   color="var(--red)" />
+                  <span className={styles.levelCell}>
+                    <span className={styles.cellLabel}>Entry</span>
+                    <span className={styles.cellMono}>{fmt(p.price_at_pick)}</span>
+                  </span>
+                  <LevelCell price={p.target_short} pct={p.target_short_pct ?? null}      color="var(--accent)" label="T1" />
+                  <LevelCell price={p.target}    pct={p.target_pct ?? null}                color="var(--accent)" label="T2" />
+                  <LevelCell price={p.stop_loss} pct={p.stop_pct  ? -p.stop_pct : null}   color="var(--red)" label="SL" />
                   <HitCell
                     hit={p.target_hit}
                     slHit={p.sl_hit}
@@ -790,7 +800,7 @@ export default function History() {
                     currentPrice={prices[p.ticker]}
                     target={p.target}
                   />
-                  <NowCell entry={p.price_at_pick} now={prices[p.ticker]} />
+                  <NowCell entry={p.price_at_pick} now={prices[p.ticker]} label="Now" />
                 </div>
                 {isOpen && (
                   <CallTrail

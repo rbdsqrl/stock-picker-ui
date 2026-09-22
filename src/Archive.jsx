@@ -43,9 +43,10 @@ function groupByDate(rows) {
   return out;
 }
 
-function LevelCell({ price, pct, color }) {
+function LevelCell({ price, pct, color, label }) {
   return (
     <span className={styles.levelCell}>
+      {label && <span className={styles.cellLabel}>{label}</span>}
       <span className={styles.cellMono} style={{ color }}>{fmt(price)}</span>
       {pct != null && <span className={styles.pctNote}>{pct > 0 ? `+${pct}` : pct}%</span>}
     </span>
@@ -73,35 +74,35 @@ function ClosureNote({ outcomePrice, outcomePct }) {
 function HitCell({ hit, slHit, days, date, slDate, slDays, t1Hit, t1Date, t1Days,
                    outcomePrice, outcomePct }) {
   if (hit === 1) return (
-    <span className={styles.hitYes} title={date ? `T2 hit on ${date}` : undefined}>
+    <span className={`${styles.hitYes} ${styles.hitCellWrap}`} title={date ? `T2 hit on ${date}` : undefined}>
       ✓ T2 {days != null ? `${days}d` : ""}
     </span>
   );
   if (slHit === 1 && t1Hit === 1) return (
-    <span className={styles.hitT1Won}
+    <span className={`${styles.hitT1Won} ${styles.hitCellWrap}`}
           title={`T1 hit on ${t1Date} — before the SL closed below on ${slDate}`}>
       ✓ T1 {t1Days != null ? `${t1Days}d` : ""} · SL
     </span>
   );
   if (hit === 0 && slHit === 1) return (
-    <span className={styles.hitNo} title={slDate ? `SL closed below on ${slDate}` : "Stopped out"}>
+    <span className={`${styles.hitNo} ${styles.hitCellWrap}`} title={slDate ? `SL closed below on ${slDate}` : "Stopped out"}>
       ✗ SL {slDays != null ? `${slDays}d` : ""}
     </span>
   );
   if (hit === 0 && t1Hit === 1) return (
-    <span className={styles.hitT1Won} title={`T1 hit on ${t1Date} — T2 never reached, expired at 45d`}>
+    <span className={`${styles.hitT1Won} ${styles.hitCellWrap}`} title={`T1 hit on ${t1Date} — T2 never reached, expired at 45d`}>
       ✓ T1 {t1Days != null ? `${t1Days}d` : ""} · exp
     </span>
   );
-  if (hit === 0) return <span className={styles.hitNo}>✗ missed</span>;
+  if (hit === 0) return <span className={`${styles.hitNo} ${styles.hitCellWrap}`}>✗ missed</span>;
   if (t1Hit === 1) return (
-    <span className={styles.hitT1} title={t1Date ? `T1 reached on ${t1Date} — frozen before T2 resolved` : undefined}>
+    <span className={`${styles.hitT1} ${styles.hitCellWrap}`} title={t1Date ? `T1 reached on ${t1Date} — frozen before T2 resolved` : undefined}>
       ◐ T1 {t1Days != null ? `${t1Days}d` : ""}
       <ClosureNote outcomePrice={outcomePrice} outcomePct={outcomePct} />
     </span>
   );
   return (
-    <span className={styles.hitPending} title="Still open, neither target nor stop reached — price and return as captured at the moment this call was frozen">
+    <span className={`${styles.hitPending} ${styles.hitCellWrap}`} title="Still open, neither target nor stop reached — price and return as captured at the moment this call was frozen">
       — still open
       <ClosureNote outcomePrice={outcomePrice} outcomePct={outcomePct} />
     </span>
@@ -205,10 +206,13 @@ export default function Archive() {
                         className={styles.tvLink}
                       >↗</a>
                     </span>
-                    <span className={styles.cellMono}>{fmt(p.price_at_pick)}</span>
-                    <LevelCell price={p.target_short} pct={p.target_short_pct ?? null} color="var(--accent)" />
-                    <LevelCell price={p.target}       pct={p.target_pct ?? null}       color="var(--accent)" />
-                    <LevelCell price={p.stop_loss}    pct={p.stop_pct ? -p.stop_pct : null} color="var(--red)" />
+                    <span className={styles.levelCell}>
+                      <span className={styles.cellLabel}>Entry</span>
+                      <span className={styles.cellMono}>{fmt(p.price_at_pick)}</span>
+                    </span>
+                    <LevelCell price={p.target_short} pct={p.target_short_pct ?? null} color="var(--accent)" label="T1" />
+                    <LevelCell price={p.target}       pct={p.target_pct ?? null}       color="var(--accent)" label="T2" />
+                    <LevelCell price={p.stop_loss}    pct={p.stop_pct ? -p.stop_pct : null} color="var(--red)" label="SL" />
                     <HitCell
                       hit={p.target_hit}
                       slHit={p.sl_hit}

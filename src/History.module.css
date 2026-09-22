@@ -151,6 +151,14 @@
 .chgUp       { font-family: var(--mono); font-size: 10px; color: var(--accent); }
 .chgDown     { font-family: var(--mono); font-size: 10px; color: var(--red); }
 .pctNote     { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+/* Field label shown inside each cell on mobile cards, where there is no
+   column header row to say what a value means. Hidden on desktop, where
+   .tableHead already carries that. */
+.cellLabel {
+  display: none;
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--muted);
+}
 
 /* Now (live) cell */
 .nowLive  { display: flex; flex-direction: column; gap: 2px; }
@@ -180,6 +188,57 @@
 .hitT1      { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--accent); opacity: 0.72; white-space: nowrap; }
 /* T1 banked before the pick closed out on the SL or the 45-day expiry — a partial win */
 .hitT1Won   { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--accent); opacity: 0.88; white-space: nowrap; }
+
+/* ── Mobile: cards instead of a horizontal table row ─────────────────────────
+   The desktop table is an 8 (History) / 7 (Archive) column grid that has no
+   room on a phone screen — SL, T1, T2 etc. were being clipped by tableWrap's
+   overflow:hidden instead of just wrapping. Below 720px each row becomes a
+   small card: rank + ticker + outcome on one line, the price levels below it
+   as labelled fields, laid out by grid-area so the same rule fits both
+   History's 8 cells and Archive's 7 (the child count differs only after the
+   first 6, which are identical: rank, ticker, entry, T1, T2, SL). */
+@media (max-width: 720px) {
+  .wrap { gap: 14px; }
+
+  .tableHead { display: none; }
+
+  .tableRow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-areas:
+      "rank ticker ticker hit"
+      "entry t1 t2 sl"
+      "now now now now";
+    column-gap: 10px;
+    row-gap: 8px;
+    height: auto;
+    padding: 10px 12px;
+    align-items: start;
+  }
+
+  .rankBadge    { grid-area: rank; align-self: center; }
+  .cellTicker   { grid-area: ticker; white-space: normal; }
+  .hitCellWrap  { grid-area: hit; justify-self: end; text-align: right; }
+
+  .tableRow > span:nth-child(3) { grid-area: entry; }
+  .tableRow > span:nth-child(4) { grid-area: t1; }
+  .tableRow > span:nth-child(5) { grid-area: t2; }
+  .tableRow > span:nth-child(6) { grid-area: sl; }
+  .tableRow > span:nth-child(8) { grid-area: now; }
+
+  .cellLabel { display: block; margin-bottom: 1px; }
+
+  .dateHeader { padding: 6px 12px; }
+  .runHeader  { padding: 5px 12px 5px 18px; }
+
+  .trail { padding: 12px 12px 14px 14px; }
+
+  .statsBar { gap: 8px; }
+  .statChip { padding: 6px 12px; min-width: 0; }
+
+  .stripHead { padding: 8px 12px; }
+  .stripMore { padding: 8px 12px; }
+}
 
 /* ── Pager ────────────────────────────────────────────────────────────────── */
 /* Sits between the table and the footnote; borrows the refresh button's styling so
@@ -291,7 +350,7 @@
 
 /* Narrow screens: the strip stacks rather than forcing the page sideways. */
 @media (max-width: 720px) {
-  .stripRow { grid-template-columns: 1fr auto; row-gap: 6px; }
+  .stripRow { grid-template-columns: 1fr auto; row-gap: 6px; padding: 8px 12px; }
   .transition { grid-column: 1 / -1; }
   .stripWhen, .stripPx { font-size: 11px; }
 }
