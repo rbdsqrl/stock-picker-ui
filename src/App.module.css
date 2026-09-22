@@ -99,3 +99,41 @@
   font-size: 10px;
   color: var(--muted);
 }
+
+@media (max-width: 640px) {
+  .header {
+    padding: 0 14px;
+  }
+
+  .logoText {
+    font-size: 11px;
+  }
+
+  .nav {
+    gap: 0;
+    max-width: 60%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .navBtn {
+    padding: 6px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .main {
+    padding: 20px 14px;
+  }
+
+  .footer {
+    padding: 10px 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
