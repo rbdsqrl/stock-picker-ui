@@ -207,12 +207,11 @@
     grid-template-columns: repeat(4, 1fr);
     grid-template-areas:
       "rank ticker ticker hit"
-      "entry t1 t2 sl"
-      "now now now now";
-    column-gap: 10px;
-    row-gap: 8px;
+      "entry t1 t2 sl";
+    column-gap: 8px;
+    row-gap: 6px;
     height: auto;
-    padding: 10px 12px;
+    padding: 8px 10px;
     align-items: start;
   }
 
@@ -224,9 +223,20 @@
   .tableRow > span:nth-child(4) { grid-area: t1; }
   .tableRow > span:nth-child(5) { grid-area: t2; }
   .tableRow > span:nth-child(6) { grid-area: sl; }
+
+  /* History rows carry an 8th cell (Now) Archive doesn't — fold it in beside
+     SL instead of giving it a mostly-empty row of its own. */
+  .tableRow:has(> span:nth-child(8)) {
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-areas:
+      "rank ticker ticker ticker hit"
+      "entry t1 t2 sl now";
+  }
   .tableRow > span:nth-child(8) { grid-area: now; }
 
   .cellLabel { display: block; margin-bottom: 1px; }
+
+  .nowBadge { padding: 1px 5px; }
 
   .dateHeader { padding: 6px 12px; }
   .runHeader  { padding: 5px 12px 5px 18px; }
